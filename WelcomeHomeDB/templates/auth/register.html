@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Register{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="username">Username</label>
+    <input name="username" id="username" required>
+
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" required>
+
+    <label for="first_name">First Name</label>
+    <input name="first_name" id="first_name" required>
+
+    <label for="last_name">Last Name</label>
+    <input name="last_name" id="last_name" required>
+
+    <label for="email_address">Email</label>
+    <input name="email_address" id="email_address" required>
+
+    <label for="role">Role</label>
+    <select name="role" id="role" required>
+        {% for role in roles %}
+            <option value="{{ role.roleID }}">{{ role.roleID }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="phone">Phone Numbers</label>
+    <div id="phone-container">
+        <input type="text" name="phones[]" id="phone" placeholder="Phone number" required>
+    </div>
+    <button type="button" id="add-phone">Add Another Phone</button>
+
+    <input type="submit" value="Register">
+  </form>
+
+  <script>
+    // Add functionality to dynamically add and remove phone number fields
+    const addPhoneButton = document.getElementById('add-phone');
+    const phoneContainer = document.getElementById('phone-container');
+
+    addPhoneButton.addEventListener('click', () => {
+        // Create a new phone input field with a remove button
+        const phoneEntry = document.createElement('div');
+        phoneEntry.classList.add('phone-entry');
+        phoneEntry.innerHTML = `
+            <input type="text" name="phones[]" placeholder="Phone number" required>
+            <button type="button" class="remove-phone">Remove</button>
+        `;
+        phoneContainer.appendChild(phoneEntry);
+    });
+
+    // Event delegation for removing phone number fields
+    phoneContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-phone')) {
+            const phoneEntry = e.target.parentElement;
+            phoneContainer.removeChild(phoneEntry);
+        }
+    });
+</script>
+{% endblock %}
