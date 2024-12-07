@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - WelcomeHome</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #ddd;">
+        <h1 style="margin: 0;">WelcomeHome</h1>
+        <ul style="list-style: none; display: flex; gap: 20px; margin: 0; padding: 0; align-items: center;">
+            {% if current_user.is_authenticated %}
+                <li>Welcome, {{ current_user.firstname }} ({{ current_user.id }})!</li>
+                <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+            {% else %}
+                <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+                <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <main class="content">
+        <header>
+            {% block header %}{% endblock %}
+        </header>
+        {% for message in get_flashed_messages() %}
+            <div class="flash">{{ message }}</div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2024 WelcomeHome. All rights reserved.</p>
+    </footer>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
