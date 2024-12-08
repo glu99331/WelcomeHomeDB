@@ -168,33 +168,8 @@ def create_auth_blueprint(login_manager: LoginManager):
     @bp.route("/index", methods=("GET", "POST"))
     def index():
         if current_user.is_authenticated:
-            # Handle the role switching
-            if request.method == "POST":
-                selected_view = request.form.get('view')
-                # Ensure that the user has both Admin/Staff and Client/Donor roles before switching
-                if ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and \
-                ('Client' in current_user.roles or 'Donor' in current_user.roles):
-                    session['current_role'] = selected_view  # Store the selected view in the session
-                    flash(f"Switched to {selected_view} view", "success")
-                else:
-                    flash("Invalid role selection or insufficient permissions.", "error")
-
-            # Get the current role from the session, default to Admin/Staff if none selected
-            current_role = session.get('current_role', None)
-
-            if current_role is None:
-                # Default to 'AdminStaff' if the user has Admin/Staff roles
-                if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles:
-                    current_role = 'AdminStaff'  # Default to Admin if the user has admin/staff roles
-                else:
-                    current_role = 'ClientDonor'  # Default to Client view if the user has Client/Donor roles
-
-            # Check if user can toggle based on roles
-            can_toggle_role = (
-                ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and
-                ('Client' in current_user.roles or 'Donor' in current_user.roles)
-            )
-
+            # Use the helper function for role switching
+            current_role, can_toggle_role = handle_role_switching(current_user)
             return render_template(
                 "auth/index.html",
                 fname=current_user.firstname,
@@ -233,10 +208,11 @@ def create_auth_blueprint(login_manager: LoginManager):
             (item_id,),
         )
         locations = cursor.fetchall()  # Fetch all matching locations
-
+        # Use the helper function for role switching
+        current_role, can_toggle_role = handle_role_switching(current_user)
         roles = current_user.roles  # Directly using roles from the user object
         return render_template(
-            "auth/index.html", locations=locations, order_items=None, roles=roles, multiple_views=False, current_role=None, can_toggle_role=False, 
+            "auth/index.html", locations=locations, order_items=None, roles=roles, multiple_views=False, current_role=current_role, can_toggle_role=can_toggle_role, 
         )
 
     # Q3
@@ -286,15 +262,16 @@ def create_auth_blueprint(login_manager: LoginManager):
                     "shelfDescription": row[6],
                 }
             )
-        
+        # Use the helper function for role switching
+        current_role, can_toggle_role = handle_role_switching(current_user)
         roles = current_user.roles  # Directly using roles from the user object
         return render_template(
             "auth/index.html",
             order_items=list(order_items.values()),
             locations=None,
             roles=roles,
-            current_role=None,  # Pass current_role to the template
-            can_toggle_role=False,  # Pass boolean for enabling view toggle
+            current_role=current_role,  # Pass current_role to the template
+            can_toggle_role=can_toggle_role,  # Pass boolean for enabling view toggle
         )
 
     # Q4
@@ -434,3 +411,35 @@ def create_auth_blueprint(login_manager: LoginManager):
         )
 
     return bp
+
+# Helper function to handle role switching:
+def handle_role_switching(current_user):
+    # Handle the role switching
+    if request.method == "POST":
+        selected_view = request.form.get('view')
+        
+        # Ensure the user has both Admin/Staff and Client/Donor roles before switching
+        if selected_view and ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and \
+           ('Client' in current_user.roles or 'Donor' in current_user.roles):
+            session['current_role'] = selected_view  # Store the selected view in the session
+            flash(f"Switched to {selected_view} view", "success")
+        elif selected_view:  # If a view is selected but the user doesn't have permission
+            flash("Invalid role selection or insufficient permissions.", "error")
+
+    # Get the current role from the session, default to Admin/Staff if none selected
+    current_role = session.get('current_role', None)
+
+    if current_role is None:
+        # Default to 'AdminStaff' if the user has Admin/Staff roles
+        if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles:
+            current_role = 'AdminStaff'  # Default to Admin if the user has admin/staff roles
+        else:
+            current_role = 'ClientDonor'  # Default to Client view if the user has Client/Donor roles
+
+    # Check if user can toggle based on roles
+    can_toggle_role = (
+        ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and
+        ('Client' in current_user.roles or 'Donor' in current_user.roles)
+    )
+    
+    return current_role, can_toggle_role
