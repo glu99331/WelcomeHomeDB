@@ -37,6 +37,7 @@ MYSQL_HOST = ''
 MYSQL_USER = ''
 MYSQL_PASSWORD = ''
 MYSQL_DB = 'WelcomeHomeDB'
+UPLOAD_FOLDER = 'uploads/'
 ```
 4. After verifying steps 1 - 3, run the following command (outside the directory):
 ```
@@ -69,3 +70,6 @@ We make the following assumptions for this application:
 - Location is UNIQUE.
 3. There is only one of each item in the Database. That is, items will not appear again through donations.
 4. If an item does not has pieces to it, the whole item itself is considered as a piece, with pieceNum = 1.
+5. We assume that the Locations and Categories are pre-defined.
+6. For a user to have a client and staff role, they must have been assigned a staff role beforehand, and then registered as client.
+- We allow the user to register for only a single role, but the only case they can have two is if they were already in the DB beforehand from some sort of Super Admin.

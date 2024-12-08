@@ -181,16 +181,6 @@ def create_auth_blueprint(login_manager: LoginManager):
             # Use the helper function for role switching
             current_role, can_toggle_role = handle_role_switching(current_user)
             item_image = None
-            cursor = get_db().cursor()
-            cursor.execute("SELECT photo FROM Item WHERE ItemID = %s", (item_id,))
-            photo_data = cursor.fetchone()
-            if photo_data and photo_data[0]:
-                photo = photo_data[0]
-                image = Image.open(io.BytesIO(photo))
-                img_io = io.BytesIO()
-                image.save(img_io, 'PNG')  # Save image as PNG
-                img_io.seek(0)
-                item_image = base64.b64encode(img_io.read()).decode('utf-8')
             return render_template(
                 "auth/index.html",
                 fname=current_user.firstname,
@@ -429,9 +419,9 @@ def create_auth_blueprint(login_manager: LoginManager):
                         if image and allowed_file(image.filename):
                             filename = secure_filename(image.filename)
                             # Save the file to a predefined folder
-                            image.save(os.path.join('WelcomeHomeDB/'+current_app.config['UPLOAD_FOLDER'], filename))
+                            image.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
                             # Open the file and read it as binary
-                            with open(os.path.join('WelcomeHomeDB/'+current_app.config['UPLOAD_FOLDER'], filename), 'rb') as f:
+                            with open(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'rb') as f:
                                 photo_data = f.read()
                         try:
                             # Insert into the Item table
