@@ -65,47 +65,49 @@ WelcomeHome
             <button type="submit">Find Order Items</button>
         </form>
 
-        {% if order_items is not none %}
-          <h2>Order Items:</h2>
-          {% if order_items %}
-              {% for item in order_items %}
-                  <h3>Item ID: {{ item.itemID }}</h3>
-                  <table border="1" style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
-                      <thead>
-                          <tr>
-                              <th>Piece Number</th>
-                              <th>Piece Description</th>
-                              <th>Room Number</th>
-                              <th>Shelf Number</th>
-                              <th>Shelf Name</th>
-                              <th>Shelf Description</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {% for piece in item.pieces %}
-                              <tr>
-                                  <td>{{ piece.pieceNum }}</td>
-                                  <td>{{ piece.pDescription }}</td>
-                                  <td>{{ piece.roomNum }}</td>
-                                  <td>{{ piece.shelfNum }}</td>
-                                  <td>{{ piece.shelf }}</td>
-                                  <td>{{ piece.shelfDescription }}</td>
-                              </tr>
-                          {% endfor %}
-                      </tbody>
-                  </table>
-              {% endfor %}
-          {% else %}
-              <p>No items found for the given Order ID.</p>
-          {% endif %}
-          
-      {% endif %}
-       <!-- Submit Donation Button -->
-       {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role))%}
-       <div style="margin-bottom: 20px;">
-           <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">Submit Donations</a>
-       </div>
-      {% endif %}
+        <div style="margin-top: 20px;">
+            {% if order_items is not none %}
+                <h2>Order Items:</h2>
+                {% if order_items %}
+                    {% for item in order_items %}
+                        <h3>Item ID: {{ item.itemID }}</h3>
+                        <table border="1" style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>Piece Number</th>
+                                    <th>Piece Description</th>
+                                    <th>Room Number</th>
+                                    <th>Shelf Number</th>
+                                    <th>Shelf Name</th>
+                                    <th>Shelf Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for piece in item.pieces %}
+                                    <tr>
+                                        <td>{{ piece.pieceNum }}</td>
+                                        <td>{{ piece.pDescription }}</td>
+                                        <td>{{ piece.roomNum }}</td>
+                                        <td>{{ piece.shelfNum }}</td>
+                                        <td>{{ piece.shelf }}</td>
+                                        <td>{{ piece.shelfDescription }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endfor %}
+                {% else %}
+                    <p>No items found for the given Order ID.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        
+        <!-- Submit Donation Button -->
+        {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role))%}
+            <div style="margin-top: 40px;">
+                <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">Submit Donations</a>
+            </div>
+        {% endif %}
     {% else %}
         <p>You are not logged in.</p>
         <a href="{{ url_for('auth.login') }}">Log In</a>
