@@ -6,6 +6,7 @@ from flask import (
     render_template,
     request,
     url_for,
+    session
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import (
@@ -21,10 +22,10 @@ from .db import get_db
 
 # Define your User class that extends UserMixin
 class User(UserMixin):
-    def __init__(self, username, fname):
+    def __init__(self, username, fname, roles):
         self.id = username
         self.firstname = fname
-        
+        self.roles = roles  # Store roles directly on the User object
 
 def create_auth_blueprint(login_manager: LoginManager):
     bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -41,8 +42,14 @@ def create_auth_blueprint(login_manager: LoginManager):
         res_dict = dict(zip(columns, res))
         user_id = res_dict.get("userName")
         fname = res_dict.get("fname")
-        print(user_id, fname)
-        return User(user_id, fname)
+
+        # Fetch the user's roles and store them in the User object
+        cursor.execute(
+            "SELECT roleID FROM Act WHERE userName = ?", (user_id,)
+        )
+        
+        roles = [row[0] for row in cursor.fetchall()]
+        return User(user_id, fname, roles)
 
     @bp.route("/register", methods=("GET", "POST"))
     def register():
@@ -51,7 +58,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         cursor = db.cursor(prepared=True, dictionary=True)
         cursor.execute("SELECT roleID FROM Role")
         roles = cursor.fetchall()
-        print(roles)
+        
         if request.method == "POST":
             username = request.form["username"]
             password = request.form["password"]
@@ -78,9 +85,8 @@ def create_auth_blueprint(login_manager: LoginManager):
                 error = "At least one phone number is required."
             elif existing_user:
                 error = f"User {username} is already registered."
-
+            
             if error is None:
-                print("here")
                 try:
                     # Insert into the Person table
                     cursor.execute(
@@ -107,6 +113,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                         )
 
                     db.commit()
+
                 except mysql.connector.IntegrityError:
                     error = f"User {username} is already registered."
                 else:
@@ -129,7 +136,6 @@ def create_auth_blueprint(login_manager: LoginManager):
             error = None
             cursor.execute("SELECT * FROM Person WHERE userName = ?", (username,))
             columns = [column[0] for column in cursor.description]
-            print(columns)
             user = cursor.fetchone()
             if user is None:
                 error = "Non-existing username"
@@ -140,8 +146,15 @@ def create_auth_blueprint(login_manager: LoginManager):
                 res_dict = dict(zip(columns, user))
                 username = res_dict.get("userName")
                 fname = res_dict.get("fname")
-                wrapped_user = User(username, fname)
+
+                # Fetch roles for the user
+                cursor.execute("SELECT roleID FROM Act WHERE userName = ?", (username,))
+                roles = [row[0] for row in cursor.fetchall()]
+                print('roles:', roles)
+
+                wrapped_user = User(username, fname, roles)
                 login_user(wrapped_user)
+                print(f"User roles assigned to wrapped_user: {wrapped_user.roles}")  # Debugging output
                 return redirect(url_for("auth.index"))  # change to your main page here
             flash(error)
 
@@ -155,23 +168,41 @@ def create_auth_blueprint(login_manager: LoginManager):
     @bp.route("/index", methods=("GET", "POST"))
     def index():
         if current_user.is_authenticated:
-            print(f"Current user: {current_user.firstname}")  # Debugging
+            # Handle the role switching
+            if request.method == "POST":
+                selected_view = request.form.get('view')
+                # Ensure that the user has both Admin/Staff and Client/Donor roles before switching
+                if ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and \
+                ('Client' in current_user.roles or 'Donor' in current_user.roles):
+                    session['current_role'] = selected_view  # Store the selected view in the session
+                    flash(f"Switched to {selected_view} view", "success")
+                else:
+                    flash("Invalid role selection or insufficient permissions.", "error")
 
-            # Retrieve the user's roles
-            db = get_db()
-            cursor = db.cursor(prepared=True, dictionary=True)
+            # Get the current role from the session, default to Admin/Staff if none selected
+            current_role = session.get('current_role', None)
 
-            # Check the roles of the current user
-            cursor.execute(
-                "SELECT roleID FROM Act WHERE userName = ?", (current_user.id,)
+            if current_role is None:
+                # Default to 'AdminStaff' if the user has Admin/Staff roles
+                if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles:
+                    current_role = 'AdminStaff'  # Default to Admin if the user has admin/staff roles
+                else:
+                    current_role = 'ClientDonor'  # Default to Client view if the user has Client/Donor roles
+
+            # Check if user can toggle based on roles
+            can_toggle_role = (
+                ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and
+                ('Client' in current_user.roles or 'Donor' in current_user.roles)
             )
-            roles = [row["roleID"] for row in cursor.fetchall()]
+
             return render_template(
                 "auth/index.html",
                 fname=current_user.firstname,
-                locations=None,
-                roles=roles,
+                roles=current_user.roles,
+                current_role=current_role,  # Pass current_role to the template
+                can_toggle_role=can_toggle_role,  # Pass boolean for enabling view toggle
             )
+
         return redirect(url_for("auth.login"))
 
     # Q2
@@ -180,7 +211,7 @@ def create_auth_blueprint(login_manager: LoginManager):
     def find_item():
         item_id = request.form["itemID"]  # Get the itemID from the form
         db = get_db()
-        cursor = db.cursor(prepared=True, dictionary=True)
+        cursor = db.cursor(prepared=True)
 
         # Query to find all locations of pieces for the given itemID
         cursor.execute(
@@ -202,12 +233,10 @@ def create_auth_blueprint(login_manager: LoginManager):
             (item_id,),
         )
         locations = cursor.fetchall()  # Fetch all matching locations
-        # Retrieve the user's roles
-        cursor.execute("SELECT roleID FROM Act WHERE userName = ?", (current_user.id,))
-        roles = [row["roleID"] for row in cursor.fetchall()]
-        # Pass the locations to the index.html template
+
+        roles = current_user.roles  # Directly using roles from the user object
         return render_template(
-            "auth/index.html", locations=locations, order_items=None, roles=roles
+            "auth/index.html", locations=locations, order_items=None, roles=roles, multiple_views=False, current_role=None, can_toggle_role=False, 
         )
 
     # Q3
@@ -216,9 +245,9 @@ def create_auth_blueprint(login_manager: LoginManager):
     def find_order_items():
         order_id = request.form["orderID"]  # Get the orderID from the form
         db = get_db()
-        cursor = db.cursor(prepared=True, dictionary=True)
+        cursor = db.cursor(prepared=True)
         # Query to find all items and their locations for the given orderID
-        cursor.execute(  # Should we get the name of the item as well to display better (just another join)
+        cursor.execute(
             """
             SELECT 
                 II.ItemID, 
@@ -240,32 +269,32 @@ def create_auth_blueprint(login_manager: LoginManager):
             (order_id,),
         )
         results = cursor.fetchall()
-        print("Results from database:", results)  # Debugging: Check fetched rows
+
         # Organize results by ItemID
         order_items = {}
         for row in results:
-            item_id = row["ItemID"]
+            item_id = row[0]
             if item_id not in order_items:
                 order_items[item_id] = {"itemID": item_id, "pieces": []}
             order_items[item_id]["pieces"].append(
                 {
-                    "pieceNum": row["pieceNum"],
-                    "pDescription": row["pDescription"],
-                    "roomNum": row["roomNum"],
-                    "shelfNum": row["shelfNum"],
-                    "shelf": row["shelf"],
-                    "shelfDescription": row["shelfDescription"],
+                    "pieceNum": row[1],
+                    "pDescription": row[2],
+                    "roomNum": row[3],
+                    "shelfNum": row[4],
+                    "shelf": row[5],
+                    "shelfDescription": row[6],
                 }
             )
-        # Retrieve the user's roles
-        cursor.execute("SELECT roleID FROM Act WHERE userName = ?", (current_user.id,))
-        roles = [row["roleID"] for row in cursor.fetchall()]
-        # Pass the results to the index.html template
+        
+        roles = current_user.roles  # Directly using roles from the user object
         return render_template(
             "auth/index.html",
             order_items=list(order_items.values()),
             locations=None,
             roles=roles,
+            current_role=None,  # Pass current_role to the template
+            can_toggle_role=False,  # Pass boolean for enabling view toggle
         )
 
     # Q4
@@ -273,7 +302,7 @@ def create_auth_blueprint(login_manager: LoginManager):
     @login_required
     def accept_donation():
         db = get_db()
-        cursor = db.cursor(prepared=True, dictionary=True)
+        cursor = db.cursor(prepared=True)
 
         # The button only appears if the user is a supervisor or a staff member.
         cursor.execute("SELECT roomNum, shelfNum FROM Location")

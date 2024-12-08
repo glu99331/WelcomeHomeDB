@@ -7,7 +7,21 @@ WelcomeHome
 
 {% block content %}
 <section>
-    {% if current_user.is_authenticated %}      
+    {% if current_user.is_authenticated %}    
+        <!-- Role Switching Dropdown next to Log Out -->
+        <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+            {% if can_toggle_role %}
+                <!-- Only show toggle for those who have both Admin/Staff and Client/Donor roles -->
+                <form method="POST" action="{{ url_for('auth.index') }}" style="display: inline-block; margin-right: 10px;">
+                    <label for="role_switch">Switch View:</label>
+                    <select name="view" id="role_switch">
+                        <option value="AdminStaff">Admin/Staff View</option>
+                        <option value="ClientDonor">Client/Donor View</option>
+                    </select>
+                    <button type="submit">Switch View</button>
+                </form>
+            {% endif %}  
+        </div>
         <!-- Find Single Item Form -->
         <form method="post" action="{{ url_for('auth.find_item') }}" style="margin-bottom: 20px;">
             <label for="itemID">Find all Locations for an Item (enter an Item ID):</label>
@@ -87,7 +101,7 @@ WelcomeHome
           
       {% endif %}
        <!-- Submit Donation Button -->
-       {% if 'Supervisor' in current_user.roles or 'StaffMember' in roles %}
+       {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role))%}
        <div style="margin-bottom: 20px;">
            <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">Submit Donations</a>
        </div>
