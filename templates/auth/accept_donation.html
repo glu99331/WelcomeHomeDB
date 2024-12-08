@@ -6,6 +6,7 @@
 
 {% block content %}
 <a href="{{ url_for('auth.index') }}" style="display: inline-block; margin-top: 20px;">Back to Home</a>
+
 {% if step == 1 %}
 <form method="post">
     {% if error %}
@@ -17,7 +18,7 @@
 </form>
 
 {% elif step == 2 %}
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <input type="hidden" name="step" value="2">
     <input type="hidden" name="donorID" value="{{ donor_id }}">
 
@@ -26,6 +27,9 @@
     <label for="itemDescription">Item Description:</label>
     <input type="text" name="itemDescription" id="itemDescription" required>
 
+    <label for="itemPhoto">Upload Item Photo:</label>
+    <input type="file" name="itemPhoto" id="itemPhoto" accept="image/*">
+
     <label for="color">Color:</label>
     <input type="text" name="color" id="color" required>
 
@@ -33,10 +37,18 @@
     <input type="text" name="material" id="material" required>
 
     <label for="mainCategory">Main Category:</label>
-    <input type="text" name="mainCategory" id="mainCategory" required>
+    <select name="mainCategory" id="mainCategory" onchange="updateSubCategories()" required>
+        <option value="">Select Main Category</option>
+        {% for category in main_categories %}
+            <option value="{{ category[0] }}">{{ category[0] }}</option>
+        {% endfor %}
+    </select>
 
     <label for="subCategory">Subcategory:</label>
-    <input type="text" name="subCategory" id="subCategory" required>
+    <select name="subCategory" id="subCategory" required>
+        <option value="">Select Subcategory</option>
+        <!-- Subcategories will be populated here based on the main category selected -->
+    </select>
 
     <label for="hasPieces">Does this item have pieces?</label>
     <select name="hasPieces" id="hasPieces" onchange="togglePiecesInput()" required>
@@ -75,9 +87,9 @@
                             <label for="roomNum_1" style="display: block;">Room Number:</label>
                             <select name="pieces[1][roomNum]" id="roomNum_1" onchange="populateShelfNumbers(this, document.getElementById('shelfNum_1'))" required style="width: 100%;">
                                 <option value="">Select Room</option>
-                                ${Array.from(new Set(validLocations.map(location => location.roomNum)))
-                                    .map(roomNum => `<option value="${roomNum}">${roomNum}</option>`)
-                                    .join("")}
+                                 {% for location in validLocations %}
+                                    <option value="{{ location[0] }}">{{ location[0] }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div>
@@ -86,6 +98,10 @@
                                 <option value="">Select Shelf</option>
                             </select>
                         </div>
+                    </div>
+                    <div>
+                        <label for="pNotes_1" style="display: block;">Piece Notes:</label>
+                        <input type="text" name="pieces[1][pNotes]" style="width: 100%;">
                     </div>
                 </div>
             </div>
@@ -101,69 +117,24 @@
 {% if step == 2 %}
 <script>
     const validLocations = {{ locations|tojson|safe }};
+    
+    // Function to toggle visibility of the "Add Piece" button based on "Has Pieces" selection
+    function togglePiecesInput() {
+        const hasPieces = document.getElementById("hasPieces").value === "true";
+        const addPieceButton = document.getElementById("addPieceButton");
 
-    function initializeRoomAndShelf() {
-        const roomNumSelect = document.getElementById("roomNum_1");
-        const shelfNumSelect = document.getElementById("shelfNum_1");
-
-        // Populate Room Numbers
-        populateRoomNumbers(roomNumSelect);
-
-        // Add event listener to update shelf numbers dynamically when a room is selected
-        roomNumSelect.addEventListener("change", () => {
-            populateShelfNumbers(roomNumSelect, shelfNumSelect);
-        });
-
-        // Populate shelf numbers for the initially selected room (if any)
-        if (roomNumSelect.value) {
-            populateShelfNumbers(roomNumSelect, shelfNumSelect);
+        // If "No" is selected, hide the "Add Piece" button
+        if (!hasPieces) {
+            addPieceButton.style.display = "none";
+        } else {
+            addPieceButton.style.display = "inline-block";
         }
     }
 
-    function populateRoomNumbers(roomNumElement) {
-        const uniqueRooms = [...new Set(validLocations.map(location => location.roomNum))];
-
-        // Clear any existing options
-        roomNumElement.innerHTML = "";
-
-        // Populate dropdown with unique room numbers
-        uniqueRooms.forEach(roomNum => {
-            const option = document.createElement("option");
-            option.value = roomNum;
-            option.textContent = roomNum;
-            roomNumElement.appendChild(option);
-        });
-
-        // Set the first room as the default value if it exists
-        if (uniqueRooms.length > 0) {
-            roomNumElement.value = uniqueRooms[0];
-        }
-    }
-
-    function populateShelfNumbers(roomNumElement, shelfNumElement) {
-        const selectedRoom = roomNumElement.value;
-
-        // Filter shelves for the selected room
-        const shelvesForRoom = validLocations.filter(
-            location => location.roomNum == selectedRoom
-        );
-
-        // Clear previous shelf options
-        shelfNumElement.innerHTML = "";
-
-        // Populate dropdown with shelf numbers for the selected room
-        shelvesForRoom.forEach(location => {
-            const option = document.createElement("option");
-            option.value = location.shelfNum;
-            option.textContent = location.shelfNum;
-            shelfNumElement.appendChild(option);
-        });
-
-        // Set the first shelf as the default value if it exists
-        if (shelvesForRoom.length > 0) {
-            shelfNumElement.value = shelvesForRoom[0].shelfNum;
-        }
-    }
+    // Initialize pieces logic on page load
+    document.addEventListener("DOMContentLoaded", function() {
+        togglePiecesInput();  // Ensure the "Add Piece" button is properly set when the page loads
+    });
 
     function addPieceInput() {
         const container = document.getElementById("piecesContainer");
@@ -172,27 +143,45 @@
         const div = document.createElement("div");
         div.style.marginBottom = "20px";
         div.innerHTML = `
-        <h4>Piece ${pieceNum}</h4>
+        <h4 style="margin-bottom: 10px;">Piece ${pieceNum}</h4>
         <div style="display: flex; flex-direction: column; gap: 10px;">
             <div>
-                <label for="pieceDescription_${pieceNum}">Description:</label>
-                <textarea name="pieces[${pieceNum}][description]" rows="4" cols="50" maxlength="200" required></textarea>
+                <label for="pieceDescription_${pieceNum}" style="display: block; margin-bottom: 5px;">Description:</label>
+                <textarea name="pieces[${pieceNum}][description]" rows="4" cols="50" maxlength="200" required style="width: 100%;"></textarea>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-                <label>Length: <input type="text" name="pieces[${pieceNum}][length]" required></label>
-                <label>Width: <input type="text" name="pieces[${pieceNum}][width]" required></label>
-                <label>Height: <input type="text" name="pieces[${pieceNum}][height]" required></label>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <div>
+                    <label for="length_${pieceNum}" style="display: block;">Length:</label>
+                    <input type="text" name="pieces[${pieceNum}][length]" required style="width: 100%;">
+                </div>
+                <div>
+                    <label for="width_${pieceNum}" style="display: block;">Width:</label>
+                    <input type="text" name="pieces[${pieceNum}][width]" required style="width: 100%;">
+                </div>
+                <div>
+                    <label for="height_${pieceNum}" style="display: block;">Height:</label>
+                    <input type="text" name="pieces[${pieceNum}][height]" required style="width: 100%;">
+                </div>
             </div>
-            <label>
-                Room Number:
-                <select name="pieces[${pieceNum}][roomNum]" id="roomNum_${pieceNum}" onchange="populateShelfNumbers(this, document.getElementById('shelfNum_${pieceNum}'))" required>
-                </select>
-            </label>
-            <label>
-                Shelf Number:
-                <select name="pieces[${pieceNum}][shelfNum]" id="shelfNum_${pieceNum}" required>
-                </select>
-            </label>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <div>
+                    <label for="roomNum_${pieceNum}" style="display: block;">Room Number:</label>
+                    <select name="pieces[${pieceNum}][roomNum]" id="roomNum_${pieceNum}" onchange="populateShelfNumbers(this, document.getElementById('shelfNum_${pieceNum}'))" required style="width: 100%;">
+                        <option value="">Select Room</option>
+                        <!-- Populate dynamically from validLocations -->
+                    </select>
+                </div>
+                <div>
+                    <label for="shelfNum_${pieceNum}" style="display: block;">Shelf Number:</label>
+                    <select name="pieces[${pieceNum}][shelfNum]" id="shelfNum_${pieceNum}" required style="width: 100%;">
+                        <option value="">Select Shelf</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label for="pNotes_${pieceNum}" style="display: block;">Piece Notes:</label>
+                <input type="text" name="pieces[${pieceNum}][pNotes]" style="width: 100%;">
+            </div>
         </div>`;
         container.appendChild(div);
 
@@ -212,9 +201,98 @@
         }
     }
 
+    // Populate Room Numbers
+    function populateRoomNumbers(roomNumElement) {
+        const uniqueRooms = [...new Set(validLocations.map(location => location[0]))];
+
+        // Clear any existing options
+        roomNumElement.innerHTML = "";
+
+        // Populate dropdown with unique room numbers
+        uniqueRooms.forEach(roomNum => {
+            const option = document.createElement("option");
+            option.value = roomNum;
+            option.textContent = roomNum;
+            roomNumElement.appendChild(option);
+        });
+
+        // Set the first room as the default value if it exists
+        if (uniqueRooms.length > 0) {
+            roomNumElement.value = uniqueRooms[0];
+        }
+    }
+
+    // Populate Shelf Numbers based on the selected room number
+    function populateShelfNumbers(roomNumElement, shelfNumElement) {
+        const selectedRoom = roomNumElement.value;
+
+        // Filter shelves for the selected room
+        const shelvesForRoom = validLocations.filter(
+            location => location[0] == selectedRoom
+        );
+
+        // Clear previous shelf options
+        shelfNumElement.innerHTML = "";
+
+        // Populate dropdown with shelf numbers for the selected room
+        shelvesForRoom.forEach(location => {
+            const option = document.createElement("option");
+            option.value = location[1];
+            option.textContent = location[1];
+            shelfNumElement.appendChild(option);
+        });
+
+        // Set the first shelf as the default value if it exists
+        if (shelvesForRoom.length > 0) {
+            shelfNumElement.value = shelvesForRoom[0][1];
+        }
+    }
+
     // Initialize Room and Shelf dropdowns for Piece 1 on page load
     document.addEventListener("DOMContentLoaded", initializeRoomAndShelf);
+
+    function initializeRoomAndShelf() {
+        const roomNumElement = document.getElementById("roomNum_1");
+        const shelfNumElement = document.getElementById("shelfNum_1");
+        
+        populateRoomNumbers(roomNumElement);
+
+        // Update shelf numbers when a new room is selected
+        roomNumElement.addEventListener("change", () =>
+            populateShelfNumbers(roomNumElement, shelfNumElement)
+        );
+
+        // Populate shelf numbers for the first room by default
+        if (roomNumElement.value) {
+            populateShelfNumbers(roomNumElement, shelfNumElement);
+        }
+    }
+
+    // Subcategory Update Function
+    const subCategoryDict = {{ sub_category_dict|tojson|safe }};
+    function updateSubCategories() {
+        const mainCategory = document.getElementById("mainCategory").value;
+        const subCategorySelect = document.getElementById("subCategory");
+        
+        // Clear existing options
+        subCategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+
+        if (mainCategory && subCategoryDict[mainCategory]) {
+            subCategoryDict[mainCategory].forEach(subCategory => {
+                const option = document.createElement("option");
+                option.value = subCategory;
+                option.textContent = subCategory;
+                subCategorySelect.appendChild(option);
+            });
+        }
+    }
+
+    // Initialize subcategories on page load if a main category is preselected
+    document.addEventListener("DOMContentLoaded", function() {
+        updateSubCategories();
+    });
 </script>
+
 {% endif %}
 
 {% endblock %}

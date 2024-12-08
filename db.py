@@ -14,7 +14,7 @@ def get_db():
             g.db.row_factory = mysql.connector.cursor.MySQLCursorDict
         except Error as e:
             print(f"Error connecting to MySQL: {e}")
-            g.db = None
+            g.db = None 
     if g.db is None:
         print("Database connection failed!")
     else:
