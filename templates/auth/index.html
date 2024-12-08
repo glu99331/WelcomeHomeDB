@@ -4,10 +4,9 @@
 WelcomeHome
 {% endblock %}
 
-
 {% block content %}
 <section>
-    {% if current_user.is_authenticated %}    
+    {% if current_user.is_authenticated %}
         <!-- Role Switching Dropdown next to Log Out -->
         <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
             {% if can_toggle_role %}
@@ -20,8 +19,9 @@ WelcomeHome
                     </select>
                     <button type="submit">Switch View</button>
                 </form>
-            {% endif %}  
+            {% endif %}
         </div>
+
         <!-- Find Single Item Form -->
         <form method="post" action="{{ url_for('auth.find_item') }}" style="margin-bottom: 20px;">
             <label for="itemID">Find all Locations for an Item (enter an Item ID):</label>
@@ -33,6 +33,17 @@ WelcomeHome
             <h2>Item Locations:</h2>
             {% if locations %}
                 <button id="toggleTable" onclick="toggleTable()">Minimize Table</button>
+                
+                <!-- Display the Item Photo if available -->
+                <div id="itemPhotoSection" style="display: block;">  <!-- Set to block by default -->
+                    {% if item_image %}
+                        <h3>Item Photo:</h3>
+                        <img src="data:image/png;base64,{{ item_image }}" alt="Item Photo" style="max-width: 300px; max-height: 300px;">
+                    {% else %}
+                        <p>No photo available for this item.</p>
+                    {% endif %}
+                </div>
+
                 <table id="locationsTable" border="1" style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
                     <thead>
                         <tr>
@@ -45,10 +56,10 @@ WelcomeHome
                     <tbody>
                         {% for location in locations %}
                             <tr>
-                                <td>{{ location.roomNum }}</td>
-                                <td>{{ location.shelfNum }}</td>
-                                <td>{{ location.shelf }}</td>
-                                <td>{{ location.shelfDescription }}</td>
+                                <td>{{ location[0] }}</td>
+                                <td>{{ location[1] }}</td>
+                                <td>{{ location[2] }}</td>
+                                <td>{{ location[3] }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -71,6 +82,12 @@ WelcomeHome
                 {% if order_items %}
                     {% for item in order_items %}
                         <h3>Item ID: {{ item.itemID }}</h3>
+                        <!-- Display the photo if it exists -->
+                        {% if item_image %}
+                            <img src="data:image/png;base64,{{ item_image }}" alt="Item Photo" style="max-width: 300px; max-height: 300px;">
+                        {% else %}
+                            <p>No photo available for this item.</p>
+                        {% endif %}
                         <table border="1" style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
                             <thead>
                                 <tr>
@@ -101,9 +118,9 @@ WelcomeHome
                 {% endif %}
             {% endif %}
         </div>
-        
+
         <!-- Submit Donation Button -->
-        {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role))%}
+        {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role)) %}
             <div style="margin-top: 40px;">
                 <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">Submit Donations</a>
             </div>
@@ -115,18 +132,22 @@ WelcomeHome
 </section>
 
 <script>
-    // JavaScript to toggle table visibility
+    // JavaScript to toggle table and image visibility
     function toggleTable() {
         const table = document.getElementById("locationsTable");
         const toggleButton = document.getElementById("toggleTable");
+        const itemPhoto = document.getElementById("itemPhotoSection");  // Add an ID for the image container
 
         if (table.style.display === "none") {
             table.style.display = "table";
+            itemPhoto.style.display = "block";  // Show the image section
             toggleButton.textContent = "Minimize Table";
         } else {
             table.style.display = "none";
+            itemPhoto.style.display = "none";  // Hide the image section
             toggleButton.textContent = "Show Table";
         }
     }
+
 </script>
 {% endblock %}
