@@ -537,17 +537,59 @@ if not any(role in current_user.roles for role in allowed_roles):
 - Before allowing the user to toggle the item status, the code checks if the user has one of the allowed roles: Supervisor, StaffMember, or Admin.
 - If the user does not have one of these roles, a 403 (Forbidden) error is returned, and they are prevented from accessing the page.
 
-### Difficulties Encountered
-1. Using Prepared Statements
-- Using prepared statements is definitely the more secure procedure, but it sacrifices some readability since we cannot use dictionary=True. So we need to either define a mapping or be very consistent with the code.
+## Difficulties encountered
 
-2. Diligence
-- We needed to be very careful and consistent with the code.
+1. **Database Integration and Query Optimization**:
+   - Integrating the MySQL database with Flask and ensuring efficient query execution was challenging. Queries involving multiple joins, such as fetching item locations and generating reports, required careful optimization to avoid performance bottlenecks.
 
-### Contributions:
+2. **User Authentication and Role Management**:
+   - Implementing a robust authentication system with role-based access control was complex. Ensuring that only authorized users could access certain routes and perform specific actions required meticulous planning and testing.
+
+3. **Dynamic Form Handling**:
+   - Managing dynamic forms for adding pieces to items was challenging. Ensuring that the form data was correctly captured and processed on the server side, especially when dealing with multiple pieces, required careful handling of form inputs and validation.
+
+4. **Error Handling and User Feedback**:
+   - Providing meaningful error messages and feedback to users was essential for a good user experience. Handling exceptions gracefully and rolling back database transactions in case of errors required thorough testing and debugging.
+
+5. **Responsive UI Design**:
+   - Designing a responsive and user-friendly interface that worked well across different devices and screen sizes was challenging. Ensuring that dynamic elements, such as dropdowns and tables, were properly styled and functional required significant effort.
+
+
+### Lessons Learned
+
+1. **Importance of Database Design**:
+   - A well-designed database schema is crucial for the performance and scalability of the application. Proper indexing and normalization can significantly improve query performance and data integrity.
+
+2. **Effective Use of Flask Extensions**:
+   - Leveraging Flask extensions, such as Flask-Login for authentication and Flask-WTF for form handling, can simplify the development process and provide robust solutions for common tasks.
+
+3. **Thorough Testing and Debugging**:
+   - Comprehensive testing, including unit tests and integration tests, is essential to ensure the reliability and correctness of the application. Debugging tools and logging can help identify and resolve issues quickly.
+
+4. **User-Centric Design**:
+   - Designing the application with the end-user in mind leads to a better user experience. Gathering feedback from users and iterating on the design can help create a more intuitive and efficient interface.
+
+5. **Handling Dynamic Data**:
+   - Managing dynamic data, such as form inputs and dropdowns, requires careful handling to ensure data integrity and a smooth user experience. JavaScript and AJAX can be used to enhance the interactivity of the application.
+
+6. **Security Best Practices**:
+   - Implementing security best practices, such as hashing passwords, validating user inputs, and managing file uploads securely, is crucial to protect the application and its users from potential threats.
+
+By addressing these difficulties and learning from the challenges faced, the project team can improve their development practices and create more robust and user-friendly applications in the future.
+
+
+## Contributions:
 1. Gordon
-- Produced the code for Q1-4, Q11 and the Custom Question. Also ensured that features were working by testing througly and provided some frontend.
+- Produced the code for Q1-4, Q11 and the Custom Question.
+- Also ensured that features were working by testing througly and provided some frontend.
+- Contributed to project report.
 
 2. Satyam
+- Added features 8 and 10 along with frontend and role management.
+- Added and fixed code security by enforcing Prepared Statements to prevent SQL injection and identified and fixed XSS bug.
+- Added helper scripts in SQL to improve the provided schema as an experiment, added indices to minimize retrieval latency, Database and Schema creation and removal and in Python to add dummy data with user's salted and hashed passwords (did not find it possible with just SQL i.e. hashing and salting with SQL) for easy testing and data manipulation and python script to load and verify the photos; uploaded to the database. 
+- Added Project manager and dependency management to ensure easy project replication with easy project dependencies installation.
+
 
 3. Ohm
+- Added features 6 and 7.

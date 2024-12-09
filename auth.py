@@ -605,7 +605,7 @@ def create_auth_blueprint(login_manager: LoginManager):
     @login_required
     def add_to_order():
         db = get_db()
-        cursor = db.cursor(dictionary=True)
+        cursor = db.cursor(prepared=True, dictionary=True)
 
         categories = []
         subcategories = []
@@ -641,7 +641,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                         SELECT i.ItemID, i.iDescription
                         FROM Item i
                         LEFT JOIN ItemIn ii ON i.ItemID = ii.ItemID
-                        WHERE i.mainCategory = %s AND i.subCategory = %s AND ii.ItemID IS NULL
+                        WHERE i.mainCategory = ? AND i.subCategory = ? AND ii.ItemID IS NULL
                         """,
                         (selected_category, selected_subcategory)
                     )
@@ -663,7 +663,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                         print("Creating a new order...")  # Debugging
                         cursor.execute(
                             "INSERT INTO Ordered (client, supervisor, orderDate) "
-                            "VALUES (%s, %s, CURDATE())",
+                            "VALUES (?, ?, CURDATE())",
                             (current_user.id, "ohmpatel47")  # Replace with actual supervisor logic
                         )
                         db.commit()
@@ -673,7 +673,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                         # Add selected items to the new order
                         for item_id in selected_items:
                             cursor.execute(
-                                "INSERT INTO ItemIn (ItemID, orderID) VALUES (%s, %s)",
+                                "INSERT INTO ItemIn (ItemID, orderID) VALUES (?, ?)",
                                 (item_id, order_id)
                             )
                         db.commit()
@@ -856,7 +856,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         if not any(role in current_user.roles for role in allowed_roles):
             return {"error": "You do not have permission to access this page."}, 403
         db = get_db()
-        cursor = db.cursor(dictionary=True)
+        cursor = db.cursor(prepared=True, dictionary=True)
         if request.method == "POST":
             # Handle AJAX toggle request
             toggle_item_id = request.form.get("toggle_item_id")
@@ -865,13 +865,13 @@ def create_auth_blueprint(login_manager: LoginManager):
                 try:
                     # Toggle the found status
                     cursor.execute(
-                        "UPDATE ItemIn SET found = NOT found WHERE ItemID = %s AND orderID = %s",
+                        "UPDATE ItemIn SET found = NOT found WHERE ItemID = ? AND orderID = ?",
                         (toggle_item_id, toggle_order_id)
                     )
                     db.commit()
                     # Fetch updated status
                     cursor.execute(
-                        "SELECT found FROM ItemIn WHERE ItemID = %s AND orderID = %s",
+                        "SELECT found FROM ItemIn WHERE ItemID = ? AND orderID = ?",
                         (toggle_item_id, toggle_order_id)
                     )
                     updated_status = cursor.fetchone()["found"]
@@ -892,14 +892,14 @@ def create_auth_blueprint(login_manager: LoginManager):
             if search_by == "orderID":
                 # Search by order ID
                 cursor.execute(
-                    "SELECT * FROM Ordered WHERE orderID = %s",
+                    "SELECT * FROM Ordered WHERE orderID = ?",
                     (search_value,)
                 )
                 orders = cursor.fetchall()
             elif search_by == "userID":
                 # Search by client username
                 cursor.execute(
-                    "SELECT * FROM Ordered WHERE client = %s",
+                    "SELECT * FROM Ordered WHERE client = ?",
                     (search_value,)
                 )
                 orders = cursor.fetchall()
@@ -911,7 +911,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                     SELECT i.ItemID, i.iDescription, ii.found
                     FROM ItemIn ii
                     JOIN Item i ON ii.ItemID = i.ItemID
-                    WHERE ii.orderID = %s
+                    WHERE ii.orderID = ?
                     """,
                     (order_id,)
                 )

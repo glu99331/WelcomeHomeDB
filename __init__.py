@@ -1,7 +1,6 @@
 import os
 
 from flask import Flask, redirect, url_for
-from flask_mysqldb import MySQL
 from flask_login import LoginManager
 def create_app(test_config=None):
     # create and configure the app

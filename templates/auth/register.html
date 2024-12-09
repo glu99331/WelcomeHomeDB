@@ -24,7 +24,7 @@
     <label for="role">Role</label>
     <select name="role" id="role" required>
         {% for role in roles %}
-            <option value="{{ role.roleID }}">{{ role.roleID }}</option>
+            <option value="{{ role.roleID | e }}">{{ role.roleID | e}}</option>
         {% endfor %}
     </select>
 
