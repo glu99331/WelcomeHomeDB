@@ -1,16 +1,11 @@
 {% extends "base.html" %}
-
 {% block title %}Prepare Orders{% endblock %}
-
 {% block content %}
 <h1>Prepare Orders</h1>
-
 <a href="{{ url_for('auth.index') }}">Back to Home</a>
-
 {% if error %}
     <p style="color: red;">{{ error }}</p>
 {% endif %}
-
 <!-- Search Form -->
 <form method="post">
     <label for="search_by">Search By:</label>
@@ -21,7 +16,6 @@
     <input type="text" name="search_value" required>
     <button type="submit">Search</button>
 </form>
-
 <!-- Display Orders -->
 {% if orders %}
     <h2>Orders Found</h2>
@@ -37,7 +31,6 @@
         {% endfor %}
     </ul>
 {% endif %}
-
 {% if items %}
     <h2>Items in Order</h2>
     <ul id="items-list">
@@ -51,18 +44,14 @@
         {% endfor %}
     </ul>
 {% endif %}
-
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const toggleButtons = document.querySelectorAll(".toggle-button");
-
         toggleButtons.forEach(button => {
             button.addEventListener("click", function (event) {
                 event.preventDefault();  // Prevent the default form submission
-
                 const itemId = this.getAttribute("data-item-id");
                 const orderId = this.getAttribute("data-order-id");
-
                 // Send AJAX request
                 fetch("{{ url_for('auth.toggle_item_status') }}", {
                     method: "POST",
