@@ -606,7 +606,7 @@ def create_auth_blueprint(login_manager: LoginManager):
     def add_to_order():
         db = get_db()
         cursor = db.cursor(dictionary=True)
-
+        
         categories = []
         subcategories = []
         items = []
@@ -925,6 +925,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         )
     
     return bp
+
 
 # Custom Question
 # Helper function to handle role switching:
