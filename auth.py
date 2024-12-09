@@ -756,9 +756,6 @@ def create_auth_blueprint(login_manager: LoginManager):
             (current_user.id, current_user.id, current_user.id),
         )
         orders = cursor.fetchall()
-        # Check if no orders were found
-        if not orders:
-            flash("No orders found for the current user.", "error")  # Flash the message if no orders are found
         orders_list = [
             {
                 "orderID": order[0],
@@ -778,6 +775,7 @@ def create_auth_blueprint(login_manager: LoginManager):
 
     return bp
 
+# Custom Question
 # Helper function to handle role switching:
 def handle_role_switching(current_user):
     # Handle the role switching
