@@ -27,6 +27,7 @@ import base64
 from PIL import Image
 from pprint import pprint
 
+
 # Define your User class that extends UserMixin
 class User(UserMixin):
     def __init__(self, username, fname, roles, current_role=None):
@@ -34,6 +35,7 @@ class User(UserMixin):
         self.firstname = fname
         self.roles = roles  # Store roles directly on the User object
         self.current_role = current_role  # Store current_role on the User object
+
 
 def create_auth_blueprint(login_manager: LoginManager):
     bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -52,14 +54,12 @@ def create_auth_blueprint(login_manager: LoginManager):
         fname = res_dict.get("fname")
 
         # Fetch the user's roles and store them in the User object
-        cursor.execute(
-            "SELECT roleID FROM Act WHERE userName = ?", (user_id,)
-        )
-        
+        cursor.execute("SELECT roleID FROM Act WHERE userName = ?", (user_id,))
+
         roles = [row[0] for row in cursor.fetchall()]
 
         # Get the current_role from session, or None if not set
-        current_role = session.get('current_role', None)
+        current_role = session.get("current_role", None)
         print("current role is:", current_role)
         return User(user_id, fname, roles, current_role)
 
@@ -70,7 +70,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         cursor = db.cursor(prepared=True, dictionary=True)
         cursor.execute("SELECT roleID FROM Role")
         roles = cursor.fetchall()
-        
+
         if request.method == "POST":
             username = request.form["username"]
             password = request.form["password"]
@@ -97,7 +97,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                 error = "At least one phone number is required."
             elif existing_user:
                 error = f"User {username} is already registered."
-            
+
             if error is None:
                 try:
                     # Insert into the Person table
@@ -162,11 +162,13 @@ def create_auth_blueprint(login_manager: LoginManager):
                 # Fetch roles for the user
                 cursor.execute("SELECT roleID FROM Act WHERE userName = ?", (username,))
                 roles = [row[0] for row in cursor.fetchall()]
-                print('roles:', roles)
+                print("roles:", roles)
 
                 wrapped_user = User(username, fname, roles)
                 login_user(wrapped_user)
-                print(f"User roles assigned to wrapped_user: {wrapped_user.roles}")  # Debugging output
+                print(
+                    f"User roles assigned to wrapped_user: {wrapped_user.roles}"
+                )  # Debugging output
                 return redirect(url_for("auth.index"))  # change to your main page here
             flash(error)
 
@@ -189,7 +191,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                 roles=current_user.roles,
                 current_role=current_role,  # Pass current_role to the template
                 can_toggle_role=can_toggle_role,  # Pass boolean for enabling view toggle
-                item_image=item_image
+                item_image=item_image,
             )
 
         return redirect(url_for("auth.login"))
@@ -222,7 +224,7 @@ def create_auth_blueprint(login_manager: LoginManager):
             (item_id,),
         )
         locations = cursor.fetchall()  # Fetch all matching locations
-        
+
         # Fetch the photo for the item
         cursor.execute("SELECT photo FROM Item WHERE ItemID = %s", (item_id,))
         photo_data = cursor.fetchone()
@@ -231,27 +233,26 @@ def create_auth_blueprint(login_manager: LoginManager):
             photo = photo_data[0]
             image = Image.open(io.BytesIO(photo))
             img_io = io.BytesIO()
-            image.save(img_io, 'PNG')  # Save image as PNG
+            image.save(img_io, "PNG")  # Save image as PNG
             img_io.seek(0)
-            img_base64 = base64.b64encode(img_io.read()).decode('utf-8')
+            img_base64 = base64.b64encode(img_io.read()).decode("utf-8")
         else:
             img_base64 = None  # No photo available for this item
 
         # Use the helper function for role switching
         current_role, can_toggle_role = handle_role_switching(current_user)
         roles = current_user.roles  # Directly using roles from the user object
-        
+
         # Render the template with locations and image
         return render_template(
-            "auth/index.html", 
-            locations=locations, 
-            order_items=None, 
-            roles=roles, 
-            current_role=current_role, 
+            "auth/index.html",
+            locations=locations,
+            order_items=None,
+            roles=roles,
+            current_role=current_role,
             can_toggle_role=can_toggle_role,
             item_image=img_base64,  # Pass the image data to the template
         )
-
 
     # Q3
     @bp.route("/find_order_items", methods=["POST"])
@@ -289,28 +290,28 @@ def create_auth_blueprint(login_manager: LoginManager):
         order_items = {}
         for row in results:
             item_id = row[0]
-            
+
             # Fetch the photo for the item
             cursor.execute("SELECT photo FROM Item WHERE ItemID = %s", (item_id,))
             photo_data = cursor.fetchone()
-            print('Photo Data',photo_data)
+            print("Photo Data", photo_data)
             if photo_data and photo_data[0]:
                 # Convert BLOB to image and encode as base64
                 photo = photo_data[0]
                 image = Image.open(io.BytesIO(photo))
                 img_io = io.BytesIO()
-                image.save(img_io, 'PNG')  # Save image as PNG
+                image.save(img_io, "PNG")  # Save image as PNG
                 img_io.seek(0)
-                img_base64 = base64.b64encode(img_io.read()).decode('utf-8')
+                img_base64 = base64.b64encode(img_io.read()).decode("utf-8")
             else:
                 img_base64 = None  # No photo available for this item
-            
+
             # Organize the order items with the photo data
             if item_id not in order_items:
                 order_items[item_id] = {
                     "itemID": item_id,
                     "photo": img_base64,  # Add photo data to the item
-                    "pieces": []
+                    "pieces": [],
                 }
 
             order_items[item_id]["pieces"].append(
@@ -335,9 +336,9 @@ def create_auth_blueprint(login_manager: LoginManager):
             roles=roles,
             current_role=current_role,  # Pass current_role to the template
             can_toggle_role=can_toggle_role,  # Pass boolean for enabling view toggle
-            item_image=img_base64
+            item_image=img_base64,
         )
-    
+
     # Q4
     @bp.route("/accept_donation", methods=("GET", "POST"))
     @login_required
@@ -348,7 +349,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         # The button only appears if the user is a supervisor or a staff member.
         cursor.execute("SELECT roomNum, shelfNum FROM Location")
         locations = cursor.fetchall()
-        print('locations:', locations)
+        print("locations:", locations)
 
         # Fetch categories from the Category table
         cursor.execute("SELECT DISTINCT mainCategory FROM Category")
@@ -364,18 +365,52 @@ def create_auth_blueprint(login_manager: LoginManager):
             sub_category_dict[main_category].append(sub_category)
         # Deny access for GET requests if the user doesn't have permission. If the user tries to manually access the /accept_donation route, deny if non-staff member
         if request.method == "GET":
-            if not ((len(current_user.roles) > 1 and current_user.current_role == 'AdminStaff') or 
-                    (len(current_user.roles) == 1 and any(role in current_user.roles for role in ['Admin', 'StaffMember', 'Supervisor', 'DeliveryPerson']))):
-                flash("You don't have the required permissions to access that page as a Non-Staff user.", "error")
-                return redirect(url_for("auth.index"))  # Redirect to the home page or an appropriate page
-        
+            if not (
+                (
+                    len(current_user.roles) > 1
+                    and current_user.current_role == "AdminStaff"
+                )
+                or (
+                    len(current_user.roles) == 1
+                    and any(
+                        role in current_user.roles
+                        for role in [
+                            "Admin",
+                            "StaffMember",
+                            "Supervisor",
+                            "DeliveryPerson",
+                        ]
+                    )
+                )
+            ):
+                flash(
+                    "You don't have the required permissions to access that page as a Non-Staff user.",
+                    "error",
+                )
+                return redirect(
+                    url_for("auth.index")
+                )  # Redirect to the home page or an appropriate page
+
         if request.method == "POST":
-            if ((len(current_user.roles) > 1 and current_user.current_role == 'AdminStaff') or (len(current_user.roles) == 1 and any(['Admin', 'StaffMember', 'Supervisor', 'DeliveryPerson']) in current_user.roles)):
-                print('current_user role is:', current_user.roles, current_user.current_role)
+            if (
+                len(current_user.roles) > 1
+                and current_user.current_role == "AdminStaff"
+            ) or (
+                len(current_user.roles) == 1
+                and any(["Admin", "StaffMember", "Supervisor", "DeliveryPerson"])
+                in current_user.roles
+            ):
+                print(
+                    "current_user role is:",
+                    current_user.roles,
+                    current_user.current_role,
+                )
                 donor_id = request.form.get("donorID")
                 # Check if donorID is provided and valid
                 if donor_id:
-                    cursor.execute("SELECT 1 FROM Person WHERE userName = ?", (donor_id,))
+                    cursor.execute(
+                        "SELECT 1 FROM Person WHERE userName = ?", (donor_id,)
+                    )
                     donor_exists = cursor.fetchone()
                     if not donor_exists:
                         flash("Invalid Donor ID. Please try again.", "error")
@@ -384,7 +419,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                     # Donor is valid, proceed to show the full form
                     if "step" in request.form and request.form["step"] == "2":
                         # Process the full form
-                        
+
                         item_description = request.form["itemDescription"]
                         color = request.form["color"]
                         material = request.form["material"]
@@ -395,35 +430,50 @@ def create_auth_blueprint(login_manager: LoginManager):
                         pieces = []
                         piece_num = 1
                         while f"pieces[{piece_num}][description]" in request.form:
-                            description = request.form.get(f"pieces[{piece_num}][description]")
+                            description = request.form.get(
+                                f"pieces[{piece_num}][description]"
+                            )
                             length = request.form.get(f"pieces[{piece_num}][length]")
                             width = request.form.get(f"pieces[{piece_num}][width]")
                             height = request.form.get(f"pieces[{piece_num}][height]")
                             room_num = request.form.get(f"pieces[{piece_num}][roomNum]")
-                            shelf_num = request.form.get(f"pieces[{piece_num}][shelfNum]")
+                            shelf_num = request.form.get(
+                                f"pieces[{piece_num}][shelfNum]"
+                            )
                             pNotes = request.form.get(f"pieces[{piece_num}][pNotes]")
-                            
+
                             # Add the piece data to the list
-                            pieces.append({
-                                "description": description,
-                                "length": length,
-                                "width": width,
-                                "height": height,
-                                "roomNum": room_num,
-                                "shelfNum": shelf_num,
-                                "pNotes": pNotes
-                            })
+                            pieces.append(
+                                {
+                                    "description": description,
+                                    "length": length,
+                                    "width": width,
+                                    "height": height,
+                                    "roomNum": room_num,
+                                    "shelfNum": shelf_num,
+                                    "pNotes": pNotes,
+                                }
+                            )
                             piece_num += 1
 
                         print(pieces)  # Debugging: Check the collected pieces
-                        image = request.files.get('itemPhoto')
+                        image = request.files.get("itemPhoto")
                         photo_data = None
                         if image and allowed_file(image.filename):
                             filename = secure_filename(image.filename)
                             # Save the file to a predefined folder
-                            image.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                            image.save(
+                                os.path.join(
+                                    current_app.config["UPLOAD_FOLDER"], filename
+                                )
+                            )
                             # Open the file and read it as binary
-                            with open(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), 'rb') as f:
+                            with open(
+                                os.path.join(
+                                    current_app.config["UPLOAD_FOLDER"], filename
+                                ),
+                                "rb",
+                            ) as f:
                                 photo_data = f.read()
                         try:
                             # Insert into the Item table
@@ -449,13 +499,13 @@ def create_auth_blueprint(login_manager: LoginManager):
                             # Insert pieces (if applicable)
                             if has_pieces:
                                 for piece in pieces:
-                                    p_description = piece['description']
-                                    length = piece['length']
-                                    width = piece['width']
-                                    height = piece['height']
-                                    room_num = piece['roomNum']
-                                    shelf_num = piece['shelfNum']
-                                    p_notes = piece['pNotes']
+                                    p_description = piece["description"]
+                                    length = piece["length"]
+                                    width = piece["width"]
+                                    height = piece["height"]
+                                    room_num = piece["roomNum"]
+                                    shelf_num = piece["shelfNum"]
+                                    p_notes = piece["pNotes"]
 
                                     cursor.execute(
                                         """
@@ -471,18 +521,18 @@ def create_auth_blueprint(login_manager: LoginManager):
                                             height,
                                             room_num,
                                             shelf_num,
-                                            p_notes
+                                            p_notes,
                                         ),
                                     )
                             else:
                                 # Set pieceNum to 1, since an item itself is just one piece.
-                                p_description = pieces[0]['description']
-                                length = pieces[0]['length']
-                                width = pieces[0]['width']
-                                height = pieces[0]['height']
-                                room_num = pieces[0]['roomNum']
-                                shelf_num = pieces[0]['shelfNum']
-                                p_notes = pieces[0]['pNotes']
+                                p_description = pieces[0]["description"]
+                                length = pieces[0]["length"]
+                                width = pieces[0]["width"]
+                                height = pieces[0]["height"]
+                                room_num = pieces[0]["roomNum"]
+                                shelf_num = pieces[0]["shelfNum"]
+                                p_notes = pieces[0]["pNotes"]
                                 # Insert a single default piece for items without pieces
                                 cursor.execute(
                                     """
@@ -498,7 +548,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                                         height,
                                         room_num,
                                         shelf_num,
-                                        p_notes
+                                        p_notes,
                                     ),
                                 )
 
@@ -520,15 +570,25 @@ def create_auth_blueprint(login_manager: LoginManager):
                             flash(f"An error occurred: {e}", "error")
                             # Check which part of the insertion caused the issue
                             if "INSERT INTO Item" in str(e):
-                                flash("Error inserting into the Item table. Please check the values provided.", "error")
+                                flash(
+                                    "Error inserting into the Item table. Please check the values provided.",
+                                    "error",
+                                )
                             elif "INSERT INTO Piece" in str(e):
-                                flash("Error inserting into the Piece table. Please check the piece data.", "error")
+                                flash(
+                                    "Error inserting into the Piece table. Please check the piece data.",
+                                    "error",
+                                )
                             elif "INSERT INTO DonatedBy" in str(e):
-                                flash("Error inserting into the DonatedBy table. Please check the donor and item link.", "error")
+                                flash(
+                                    "Error inserting into the DonatedBy table. Please check the donor and item link.",
+                                    "error",
+                                )
                             else:
                                 flash("An unexpected error occurred.", "error")
                             # Provide detailed traceback for debugging purposes
                             import traceback
+
                             traceback.print_exc()  # This will print the full traceback of the erro
                             return render_template(
                                 "auth/accept_donation.html",
@@ -552,13 +612,18 @@ def create_auth_blueprint(login_manager: LoginManager):
             "auth/accept_donation.html",
             step=1,
         )
-    
+
     # Q11
     @bp.route("/generate_report", methods=["GET"])
     @login_required
     def generate_report():
         # Check if the user has the appropriate roles
-        if not ('StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'Admin' in current_user.roles or 'DeliveryPerson' in current_user.roles):
+        if not (
+            "StaffMember" in current_user.roles
+            or "Supervisor" in current_user.roles
+            or "Admin" in current_user.roles
+            or "DeliveryPerson" in current_user.roles
+        ):
             flash("You don't have permission to access this report.", "error")
             return redirect(url_for("auth.index"))
 
@@ -566,11 +631,15 @@ def create_auth_blueprint(login_manager: LoginManager):
         cursor = db.cursor(prepared=True)
 
         # Query 1: Number of clients served
-        cursor.execute("SELECT COUNT(DISTINCT userName) AS clients_served FROM DonatedBy;")
+        cursor.execute(
+            "SELECT COUNT(DISTINCT userName) AS clients_served FROM DonatedBy;"
+        )
         clients_served = cursor.fetchone()[0]
 
         # Query 2: Number of items donated by each category
-        cursor.execute("SELECT mainCategory, COUNT(ItemID) AS items_donated FROM Item GROUP BY mainCategory;")
+        cursor.execute(
+            "SELECT mainCategory, COUNT(ItemID) AS items_donated FROM Item GROUP BY mainCategory;"
+        )
         items_by_category = cursor.fetchall()
 
         # Query 3: Number of donations per month
@@ -630,12 +699,16 @@ def create_auth_blueprint(login_manager: LoginManager):
         if request.method == "POST":
             selected_category = request.form.get("category")
             selected_subcategory = request.form.get("subcategory")
-            print(f"Selected Category: {selected_category}, Subcategory: {selected_subcategory}")  # Debugging
+            print(
+                f"Selected Category: {selected_category}, Subcategory: {selected_subcategory}"
+            )  # Debugging
 
             if "filter_items" in request.form:
                 # Handle filtering items
                 try:
-                    print(f"Executing query with Category: {selected_category}, Subcategory: {selected_subcategory}")
+                    print(
+                        f"Executing query with Category: {selected_category}, Subcategory: {selected_subcategory}"
+                    )
                     cursor.execute(
                         """
                         SELECT i.ItemID, i.iDescription
@@ -643,7 +716,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                         LEFT JOIN ItemIn ii ON i.ItemID = ii.ItemID
                         WHERE i.mainCategory = %s AND i.subCategory = %s AND ii.ItemID IS NULL
                         """,
-                        (selected_category, selected_subcategory)
+                        (selected_category, selected_subcategory),
                     )
                     items = cursor.fetchall()
                     print(f"Fetched Items: {items}")  # Debugging
@@ -664,7 +737,10 @@ def create_auth_blueprint(login_manager: LoginManager):
                         cursor.execute(
                             "INSERT INTO Ordered (client, supervisor, orderDate) "
                             "VALUES (%s, %s, CURDATE())",
-                            (current_user.id, "ohmpatel47")  # Replace with actual supervisor logic
+                            (
+                                current_user.id,
+                                "ohmpatel47",
+                            ),  # Replace with actual supervisor logic
                         )
                         db.commit()
                         order_id = cursor.lastrowid
@@ -674,10 +750,13 @@ def create_auth_blueprint(login_manager: LoginManager):
                         for item_id in selected_items:
                             cursor.execute(
                                 "INSERT INTO ItemIn (ItemID, orderID) VALUES (%s, %s)",
-                                (item_id, order_id)
+                                (item_id, order_id),
                             )
                         db.commit()
-                        flash("Selected items successfully added to your new order.", "success")
+                        flash(
+                            "Selected items successfully added to your new order.",
+                            "success",
+                        )
                     except Exception as e:
                         db.rollback()
                         error = f"Error adding items to the order: {e}"
@@ -693,9 +772,9 @@ def create_auth_blueprint(login_manager: LoginManager):
             items=items,
             error=error,
             selected_category=selected_category,
-            selected_subcategory=selected_subcategory
+            selected_subcategory=selected_subcategory,
         )
-    
+
     # Q8
     @bp.route("/get_orders", methods=["GET"])
     @login_required
@@ -758,7 +837,9 @@ def create_auth_blueprint(login_manager: LoginManager):
         orders = cursor.fetchall()
         # Check if no orders were found
         if not orders:
-            flash("No orders found for the current user.", "error")  # Flash the message if no orders are found
+            flash(
+                "No orders found for the current user.", "error"
+            )  # Flash the message if no orders are found
         orders_list = [
             {
                 "orderID": order[0],
@@ -768,7 +849,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                 "client": order[4],
                 "status": order[5],
                 "deliveryDate": order[6],
-                "role": order[7]
+                "role": order[7],
             }
             for order in orders
         ]
@@ -776,41 +857,141 @@ def create_auth_blueprint(login_manager: LoginManager):
 
         return jsonify({"orders": orders_list})
 
+    @bp.route("/get_user_orders", methods=["GET"])
+    @login_required
+    def get_user_orders():
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            """SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'Supervisor' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                O.supervisor = ?
+            UNION
+            SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'DeliveryPerson' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                D.userName = ?
+            ORDER BY 
+                orderDate DESC;
+            """,
+            (current_user.id, current_user.id),
+        )
+        orders = cursor.fetchall()
+        orders_list = [
+            {
+                "orderID": order[0],
+                "orderDate": order[1],
+                "orderNotes": order[2],
+                "supervisor": order[3],
+                "client": order[4],
+                "status": order[5],
+                "deliveryDate": order[6],
+                "role": order[7],
+            }
+            for order in orders
+        ]
+        return jsonify({"orders": orders_list})
+
+    @bp.route("/update_order_status", methods=["POST"])
+    @login_required
+    def update_order_status():
+        order_id = request.form["orderID"]
+        new_status = request.form["status"]
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            "UPDATE Delivered SET status = ? WHERE orderID = ?", (new_status, order_id)
+        )
+        db.commit()
+        return jsonify({"success": True})
+
     return bp
+
 
 # Helper function to handle role switching:
 def handle_role_switching(current_user):
     # Handle the role switching
     if request.method == "POST":
-        selected_view = request.form.get('view')
-        
+        selected_view = request.form.get("view")
+
         # Ensure the user has both Admin/Staff and Client/Donor roles before switching
-        if selected_view and ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles) and \
-           ('Client' in current_user.roles or 'Donor' in current_user.roles):
-            session['current_role'] = selected_view  # Store the selected view in the session
-            current_user.current_role = selected_view  # Update the user object's current_role
+        if (
+            selected_view
+            and (
+                "Admin" in current_user.roles
+                or "StaffMember" in current_user.roles
+                or "Supervisor" in current_user.roles
+                or "DeliveryPerson" in current_user.roles
+            )
+            and ("Client" in current_user.roles or "Donor" in current_user.roles)
+        ):
+            session["current_role"] = (
+                selected_view  # Store the selected view in the session
+            )
+            current_user.current_role = (
+                selected_view  # Update the user object's current_role
+            )
             flash(f"Switched to {selected_view} view", "success")
-        elif selected_view:  # If a view is selected but the user doesn't have permission
+        elif (
+            selected_view
+        ):  # If a view is selected but the user doesn't have permission
             flash("Invalid role selection or insufficient permissions.", "error")
 
     # Get the current role from the session, default to Admin/Staff if none selected
-    current_role = session.get('current_role', None)
+    current_role = session.get("current_role", None)
 
     if current_role is None:
         # Default to 'AdminStaff' if the user has Admin/Staff roles
-        if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles:
-            current_role = 'AdminStaff'  # Default to Admin if the user has admin/staff roles
+        if (
+            "Admin" in current_user.roles
+            or "StaffMember" in current_user.roles
+            or "Supervisor" in current_user.roles
+            or "DeliveryPerson" in current_user.roles
+        ):
+            current_role = (
+                "AdminStaff"  # Default to Admin if the user has admin/staff roles
+            )
         else:
-            current_role = 'ClientDonor'  # Default to Client view if the user has Client/Donor roles
+            current_role = "ClientDonor"  # Default to Client view if the user has Client/Donor roles
 
     # Check if user can toggle based on roles
     can_toggle_role = (
-        ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles) and
-        ('Client' in current_user.roles or 'Donor' in current_user.roles)
-    )
-    
+        "Admin" in current_user.roles
+        or "StaffMember" in current_user.roles
+        or "Supervisor" in current_user.roles
+        or "DeliveryPerson" in current_user.roles
+    ) and ("Client" in current_user.roles or "Donor" in current_user.roles)
+
     return current_role, can_toggle_role
+
 
 # Define allowed file extensions function
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower()
+        in current_app.config["ALLOWED_EXTENSIONS"]
+    )

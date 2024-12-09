@@ -5,11 +5,18 @@ from mysql.connector import Error
 def get_db():
     if 'db' not in g:
         try:
+            # g.db = mysql.connector.connect(
+            #     host=current_app.config['MYSQL_HOST'],
+            #     user=current_app.config['MYSQL_USER'],
+            #     password=current_app.config['MYSQL_PASSWORD'],
+            #     database=current_app.config['MYSQL_DB']
+            # )
+
             g.db = mysql.connector.connect(
-                host=current_app.config['MYSQL_HOST'],
-                user=current_app.config['MYSQL_USER'],
-                password=current_app.config['MYSQL_PASSWORD'],
-                database=current_app.config['MYSQL_DB']
+                host="localhost",
+                user="welcomehomeadmin",
+                password="1234",
+                database="WelcomeHomeDB"
             )
             g.db.row_factory = mysql.connector.cursor.MySQLCursorDict
         except Error as e:
