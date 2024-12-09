@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Prepare Orders{% endblock %}
+
+{% block content %}
+<h1>Prepare Orders</h1>
+
+<a href="{{ url_for('auth.index') }}">Back to Home</a>
+
+{% if error %}
+    <p style="color: red;">{{ error }}</p>
+{% endif %}
+
+<!-- Search Form -->
+<form method="post">
+    <label for="search_by">Search By:</label>
+    <select name="search_by" id="search_by" required>
+        <option value="orderID">Order ID</option>
+        <option value="userID">User ID</option>
+    </select>
+    <input type="text" name="search_value" required>
+    <button type="submit">Search</button>
+</form>
+
+<!-- Display Orders -->
+{% if orders %}
+    <h2>Orders Found</h2>
+    <ul>
+        {% for order in orders %}
+            <li>
+                Order ID: {{ order.orderID }} | Client: {{ order.client }}
+                <form method="post" style="display: inline;">
+                    <input type="hidden" name="orderID" value="{{ order.orderID }}">
+                    <button type="submit">View Items</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+{% if items %}
+    <h2>Items in Order</h2>
+    <ul id="items-list">
+        {% for item in items %}
+            <li id="item-{{ item.ItemID }}">
+                {{ item.iDescription }} - Found: <span class="found-status">{{ 'Yes' if item.found else 'No' }}</span>
+                <button class="toggle-button" data-item-id="{{ item.ItemID }}" data-order-id="{{ request.form.get('orderID') }}">
+                    Toggle Found
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleButtons = document.querySelectorAll(".toggle-button");
+
+        toggleButtons.forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();  // Prevent the default form submission
+
+                const itemId = this.getAttribute("data-item-id");
+                const orderId = this.getAttribute("data-order-id");
+
+                // Send AJAX request
+                fetch("{{ url_for('auth.toggle_item_status') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: new URLSearchParams({
+                        toggle_item_id: itemId,
+                        orderID: orderId,
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the found status in the UI
+                            const statusElement = document.querySelector(`#item-${itemId} .found-status`);
+                            statusElement.textContent = data.found ? "Yes" : "No";
+                        } else {
+                            console.error("Error:", data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                    });
+            });
+        });
+    });
+</script>
+{% endblock %}

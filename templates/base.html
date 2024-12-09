@@ -16,14 +16,20 @@
             {% if current_user.is_authenticated %}
                 <li>Welcome, {{ current_user.firstname }} ({{ current_user.id }})!</li>
                 <li><a href="{{ url_for('auth.add_to_order') }}">Add to Order</a></li>
+                
+                <!-- New Link for Staffmembers and Admin -->
+                {% if 'Supervisor' in current_user.roles or 'StaffMember' in current_user.roles or 'Admin' in current_user.roles %}
+                <li><a href="{{ url_for('auth.toggle_item_status') }}">Prepare Orders</a></li>
+                {% endif %}
+                
                 <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
-            
             {% else %}
                 <li><a href="{{ url_for('auth.register') }}">Register</a></li>
                 <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
             {% endif %}
         </ul>
     </nav>
+    
     <main class="content">
         <header>
             {% block header %}{% endblock %}

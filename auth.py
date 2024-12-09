@@ -649,7 +649,91 @@ def create_auth_blueprint(login_manager: LoginManager):
             selected_subcategory=selected_subcategory
         )
 
+    #Feature No. 7
+    @bp.route("/toggle_item_status", methods=["GET", "POST"])
+    @login_required
+    def toggle_item_status():
+        # Restrict access to allowed roles
+        allowed_roles = ['Supervisor', 'StaffMember', 'Admin']
+        if not any(role in current_user.roles for role in allowed_roles):
+            return {"error": "You do not have permission to access this page."}, 403
 
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+
+        if request.method == "POST":
+            # Handle AJAX toggle request
+            toggle_item_id = request.form.get("toggle_item_id")
+            toggle_order_id = request.form.get("orderID")  # Get orderID explicitly from form
+
+            if toggle_item_id and toggle_order_id:
+                try:
+                    # Toggle the found status
+                    cursor.execute(
+                        "UPDATE ItemIn SET found = NOT found WHERE ItemID = %s AND orderID = %s",
+                        (toggle_item_id, toggle_order_id)
+                    )
+                    db.commit()
+
+                    # Fetch updated status
+                    cursor.execute(
+                        "SELECT found FROM ItemIn WHERE ItemID = %s AND orderID = %s",
+                        (toggle_item_id, toggle_order_id)
+                    )
+                    updated_status = cursor.fetchone()["found"]
+
+                    # Return updated status as JSON
+                    return {"success": True, "itemID": toggle_item_id, "found": updated_status}, 200
+                except Exception as e:
+                    db.rollback()
+                    return {"error": str(e)}, 500
+
+        # Handle regular order search (non-AJAX request)
+        orders = []
+        items = []
+        error = None
+
+        if request.method == "POST":
+            search_by = request.form.get("search_by")
+            search_value = request.form.get("search_value")
+            print(f"Searching for orders by {search_by}: {search_value}")  # Debugging
+
+            if search_by == "orderID":
+                # Search by order ID
+                cursor.execute(
+                    "SELECT * FROM Ordered WHERE orderID = %s",
+                    (search_value,)
+                )
+                orders = cursor.fetchall()
+            elif search_by == "userID":
+                # Search by client username
+                cursor.execute(
+                    "SELECT * FROM Ordered WHERE client = %s",
+                    (search_value,)
+                )
+                orders = cursor.fetchall()
+
+            # Fetch items in the selected order
+            order_id = request.form.get("orderID")
+            if order_id:
+                cursor.execute(
+                    """
+                    SELECT i.ItemID, i.iDescription, ii.found
+                    FROM ItemIn ii
+                    JOIN Item i ON ii.ItemID = i.ItemID
+                    WHERE ii.orderID = %s
+                    """,
+                    (order_id,)
+                )
+                items = cursor.fetchall()
+                print(f"Items in order {order_id}: {items}")  # Debugging
+
+        return render_template(
+            "auth/prepare_orders.html",
+            orders=orders,
+            items=items,
+            error=error
+        )
 
 
 
