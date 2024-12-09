@@ -31,10 +31,41 @@ WelcomeHome
 
         <!-- Show All Associated Orders Button -->
         <button id="showOrdersButton" type="button">Show all associated orders</button>
+        {% if 'Supervisor' in roles or 'DeliveryPerson' in roles %}
+        <!-- Order Status Button -->
+            <button id="orderStatusButton" type="button">Order Status</button>
+        {% endif %}
+
+        <!-- Orders Status Table -->
+        <div id="orderStatusTableContainer" style="display: none; margin-top: 20px;">
+            <h2>Order Status:</h2>
+            <table id="orderStatusTable" border="1"
+                style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Order Date</th>
+                        <th>Order Notes</th>
+                        <th>Supervisor</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Delivery Date</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+
         <!-- Orders Table -->
         <div id="ordersTableContainer" style="display: none; margin-top: 20px;">
             <h2>Associated Orders:</h2>
-            <table id="ordersTable" border="1" style="border-collapse: collapse; width: 100%; text-align: left;">
+            <table id="ordersTable" border="1"
+                style="border-collapse: collapse; width: 100%; text-align: left; margin-top: 10px;">
                 <thead>
                     <tr>
                         <th>Order ID</th>
@@ -48,7 +79,7 @@ WelcomeHome
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Orders will be populated here by JavaScript -->
+                    <!-- Rows will be populated by JavaScript -->
                 </tbody>
             </table>
         </div>
@@ -206,6 +237,61 @@ WelcomeHome
             })
             .catch(error => console.error('Error fetching orders:', error));
     });
+
+    document.getElementById('orderStatusButton').addEventListener('click', function () {
+        fetch('{{ url_for("auth.get_user_orders") }}')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.querySelector('#orderStatusTable tbody');
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                data.orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.orderID}</td>
+                        <td>${order.orderDate}</td>
+                        <td>${order.orderNotes}</td>
+                        <td>${order.supervisor}</td>
+                        <td>${order.client}</td>
+                        <td>
+                            <select name="status" data-order-id="${order.orderID}">
+                                <option value="Processed" ${order.status === 'Processed' ? 'selected' : ''}>Processed</option>
+                                <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                            </select>
+                        </td>
+                        <td>${order.deliveryDate}</td>
+                        <td>${order.role}</td>
+                        <td><button type="button" onclick="saveOrderStatus(${order.orderID})">Save</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                document.getElementById('orderStatusTableContainer').style.display = 'block';
+            })
+            .catch(error => console.error('Error fetching user orders:', error));
+    });
+    function saveOrderStatus(orderID) {
+        const selectElement = document.querySelector(`select[data-order-id="${orderID}"]`);
+        const newStatus = selectElement.value;
+
+        fetch('{{ url_for("auth.update_order_status") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `orderID=${orderID}&status=${newStatus}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Order status updated successfully.');
+                } else {
+                    alert('Failed to update order status.');
+                }
+            })
+            .catch(error => console.error('Error updating order status:', error));
+    }
 
 </script>
 {% endblock %}

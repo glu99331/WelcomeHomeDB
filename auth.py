@@ -772,7 +772,158 @@ def create_auth_blueprint(login_manager: LoginManager):
         pprint(orders_list)
 
         return jsonify({"orders": orders_list})
+    
 
+    @bp.route("/get_user_orders", methods=["GET"])
+    @login_required
+    def get_user_orders():
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            """SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'Supervisor' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                O.supervisor = ?
+            UNION
+            SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'DeliveryPerson' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                D.userName = ?
+            ORDER BY 
+                orderDate DESC;
+            """,
+            (current_user.id, current_user.id),
+        )
+        orders = cursor.fetchall()
+        orders_list = [
+            {
+                "orderID": order[0],
+                "orderDate": order[1],
+                "orderNotes": order[2],
+                "supervisor": order[3],
+                "client": order[4],
+                "status": order[5],
+                "deliveryDate": order[6],
+                "role": order[7]
+            }
+            for order in orders
+        ]
+        return jsonify({"orders": orders_list})
+    
+
+    @bp.route("/update_order_status", methods=["POST"])
+    @login_required
+    def update_order_status():
+        order_id = request.form["orderID"]
+        new_status = request.form["status"]
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            "UPDATE Delivered SET status = ? WHERE orderID = ?",
+            (new_status, order_id)
+        )
+        db.commit()
+        return jsonify({"success": True})
+
+     #Feature No. 7
+    @bp.route("/toggle_item_status", methods=["GET", "POST"])
+    @login_required
+    def toggle_item_status():
+        # Restrict access to allowed roles
+        allowed_roles = ['Supervisor', 'StaffMember', 'Admin']
+        if not any(role in current_user.roles for role in allowed_roles):
+            return {"error": "You do not have permission to access this page."}, 403
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        if request.method == "POST":
+            # Handle AJAX toggle request
+            toggle_item_id = request.form.get("toggle_item_id")
+            toggle_order_id = request.form.get("orderID")  # Get orderID explicitly from form
+            if toggle_item_id and toggle_order_id:
+                try:
+                    # Toggle the found status
+                    cursor.execute(
+                        "UPDATE ItemIn SET found = NOT found WHERE ItemID = %s AND orderID = %s",
+                        (toggle_item_id, toggle_order_id)
+                    )
+                    db.commit()
+                    # Fetch updated status
+                    cursor.execute(
+                        "SELECT found FROM ItemIn WHERE ItemID = %s AND orderID = %s",
+                        (toggle_item_id, toggle_order_id)
+                    )
+                    updated_status = cursor.fetchone()["found"]
+
+                    # Return updated status as JSON
+                    return {"success": True, "itemID": toggle_item_id, "found": updated_status}, 200
+                except Exception as e:
+                    db.rollback()
+                    return {"error": str(e)}, 500
+        # Handle regular order search (non-AJAX request)
+        orders = []
+        items = []
+        error = None
+        if request.method == "POST":
+            search_by = request.form.get("search_by")
+            search_value = request.form.get("search_value")
+            print(f"Searching for orders by {search_by}: {search_value}")  # Debugging
+            if search_by == "orderID":
+                # Search by order ID
+                cursor.execute(
+                    "SELECT * FROM Ordered WHERE orderID = %s",
+                    (search_value,)
+                )
+                orders = cursor.fetchall()
+            elif search_by == "userID":
+                # Search by client username
+                cursor.execute(
+                    "SELECT * FROM Ordered WHERE client = %s",
+                    (search_value,)
+                )
+                orders = cursor.fetchall()
+            # Fetch items in the selected order
+            order_id = request.form.get("orderID")
+            if order_id:
+                cursor.execute(
+                    """
+                    SELECT i.ItemID, i.iDescription, ii.found
+                    FROM ItemIn ii
+                    JOIN Item i ON ii.ItemID = i.ItemID
+                    WHERE ii.orderID = %s
+                    """,
+                    (order_id,)
+                )
+                items = cursor.fetchall()
+                print(f"Items in order {order_id}: {items}")  # Debugging
+        return render_template(
+            "auth/prepare_orders.html",
+            orders=orders,
+            items=items,
+            error=error
+        )
+    
     return bp
 
 # Custom Question
