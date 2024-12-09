@@ -120,12 +120,20 @@ WelcomeHome
         </div>
 
         <!-- Submit Donation Button -->
-        {% if((can_toggle_role and current_role == 'AdminStaff') or ('Supervisor' in current_user.roles or 'StaffMember' in roles and not can_toggle_role)) %}
-            <div style="margin-top: 40px;">
-                <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">Submit Donations</a>
+        {% if((can_toggle_role and current_role == 'AdminStaff') or (('Supervisor' in current_user.roles or 'StaffMember' in current_user.roles or 'Admin' in current_user.roles or 'DeliveryPerson' in current_user.roles) and (not can_toggle_role))) %}
+            <div style="display: flex; gap: 20px; margin-top: 40px;">
+                <!-- Submit Donation Button -->
+                <a href="{{ url_for('auth.accept_donation') }}" class="button" style="text-decoration: none; background-color: #007BFF; color: white; padding: 10px 15px; border-radius: 5px;">
+                    Submit Donations
+                </a>
+        
+                <!-- Generate Report Button -->
+                <a href="{{ url_for('auth.generate_report') }}" class="button" style="text-decoration: none; background-color: #28a745; color: white; padding: 10px 15px; border-radius: 5px;">
+                    View Year-End Report
+                </a>
             </div>
         {% endif %}
-    {% else %}
+        {% else %}
         <p>You are not logged in.</p>
         <a href="{{ url_for('auth.login') }}">Log In</a>
     {% endif %}

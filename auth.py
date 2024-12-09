@@ -363,12 +363,12 @@ def create_auth_blueprint(login_manager: LoginManager):
         # Deny access for GET requests if the user doesn't have permission. If the user tries to manually access the /accept_donation route, deny if non-staff member
         if request.method == "GET":
             if not ((len(current_user.roles) > 1 and current_user.current_role == 'AdminStaff') or 
-                    (len(current_user.roles) == 1 and any(role in current_user.roles for role in ['Admin', 'StaffMember', 'Supervisor']))):
+                    (len(current_user.roles) == 1 and any(role in current_user.roles for role in ['Admin', 'StaffMember', 'Supervisor', 'DeliveryPerson']))):
                 flash("You don't have the required permissions to access that page as a Non-Staff user.", "error")
                 return redirect(url_for("auth.index"))  # Redirect to the home page or an appropriate page
         
         if request.method == "POST":
-            if ((len(current_user.roles) > 1 and current_user.current_role == 'AdminStaff') or (len(current_user.roles) == 1 and any(['Admin', 'StaffMember', 'Supervisor']) in current_user.roles)):
+            if ((len(current_user.roles) > 1 and current_user.current_role == 'AdminStaff') or (len(current_user.roles) == 1 and any(['Admin', 'StaffMember', 'Supervisor', 'DeliveryPerson']) in current_user.roles)):
                 print('current_user role is:', current_user.roles, current_user.current_role)
                 donor_id = request.form.get("donorID")
                 # Check if donorID is provided and valid
@@ -550,6 +550,53 @@ def create_auth_blueprint(login_manager: LoginManager):
             "auth/accept_donation.html",
             step=1,
         )
+    
+    # Q11
+    @bp.route("/generate_report", methods=["GET"])
+    @login_required
+    def generate_report():
+        # Check if the user has the appropriate roles
+        if not ('StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'Admin' in current_user.roles or 'DeliveryPerson' in current_user.roles):
+            flash("You don't have permission to access this report.", "error")
+            return redirect(url_for("auth.index"))
+
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+
+        # Query 1: Number of clients served
+        cursor.execute("SELECT COUNT(DISTINCT userName) AS clients_served FROM DonatedBy;")
+        clients_served = cursor.fetchone()[0]
+
+        # Query 2: Number of items donated by each category
+        cursor.execute("SELECT mainCategory, COUNT(ItemID) AS items_donated FROM Item GROUP BY mainCategory;")
+        items_by_category = cursor.fetchall()
+
+        # Query 3: Number of donations per month
+        cursor.execute("""
+            SELECT YEAR(donateDate) AS year, MONTH(donateDate) AS month, COUNT(*) AS donations_per_month
+            FROM DonatedBy
+            GROUP BY YEAR(donateDate), MONTH(donateDate)
+            ORDER BY year DESC, month DESC;
+        """)
+        donations_per_month = cursor.fetchall()
+
+        # Query 4: Number of items in each room and shelf
+        cursor.execute("""
+            SELECT L.roomNum, L.shelfNum, COUNT(P.pieceNum) AS items_in_shelf
+            FROM Piece P
+            JOIN Location L ON P.roomNum = L.roomNum AND P.shelfNum = L.shelfNum
+            GROUP BY L.roomNum, L.shelfNum;
+        """)
+        items_in_shelf = cursor.fetchall()
+
+        # Render the report template with the collected data
+        return render_template(
+            "auth/generate_report.html",
+            clients_served=clients_served,
+            items_by_category=items_by_category,
+            donations_per_month=donations_per_month,
+            items_in_shelf=items_in_shelf,
+        )
 
     return bp
 
@@ -560,7 +607,7 @@ def handle_role_switching(current_user):
         selected_view = request.form.get('view')
         
         # Ensure the user has both Admin/Staff and Client/Donor roles before switching
-        if selected_view and ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and \
+        if selected_view and ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles) and \
            ('Client' in current_user.roles or 'Donor' in current_user.roles):
             session['current_role'] = selected_view  # Store the selected view in the session
             current_user.current_role = selected_view  # Update the user object's current_role
@@ -573,14 +620,14 @@ def handle_role_switching(current_user):
 
     if current_role is None:
         # Default to 'AdminStaff' if the user has Admin/Staff roles
-        if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles:
+        if 'Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles:
             current_role = 'AdminStaff'  # Default to Admin if the user has admin/staff roles
         else:
             current_role = 'ClientDonor'  # Default to Client view if the user has Client/Donor roles
 
     # Check if user can toggle based on roles
     can_toggle_role = (
-        ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles) and
+        ('Admin' in current_user.roles or 'StaffMember' in current_user.roles or 'Supervisor' in current_user.roles or 'DeliveryPerson' in current_user.roles) and
         ('Client' in current_user.roles or 'Donor' in current_user.roles)
     )
     

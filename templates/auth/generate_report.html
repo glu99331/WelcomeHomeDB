@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Year-End Report{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('auth.index') }}" style="display: inline-block; margin-top: 20px;">Back to Home</a>
+
+<h1>Year-End Report</h1>
+
+<h2>1. Number of Clients Served: {{ clients_served }}</h2>
+
+<h2>2. Number of Items Donated by Category:</h2>
+<table border="1" style="border-collapse: collapse; width: 100%; text-align: left;">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Items Donated</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for category, items in items_by_category %}
+        <tr>
+            <td>{{ category }}</td>
+            <td>{{ items }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>3. Number of Donations Per Month:</h2>
+<table border="1" style="border-collapse: collapse; width: 100%; text-align: left;">
+    <thead>
+        <tr>
+            <th>Year</th>
+            <th>Month</th>
+            <th>Donations</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for year, month, donations in donations_per_month %}
+        <tr>
+            <td>{{ year }}</td>
+            <td>{{ month }}</td>
+            <td>{{ donations }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>4. Items in Each Shelf:</h2>
+<table border="1" style="border-collapse: collapse; width: 100%; text-align: left;">
+    <thead>
+        <tr>
+            <th>Room Number</th>
+            <th>Shelf Number</th>
+            <th>Items in Shelf</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for room_num, shelf_num, items in items_in_shelf %}
+        <tr>
+            <td>{{ room_num }}</td>
+            <td>{{ shelf_num }}</td>
+            <td>{{ items }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
