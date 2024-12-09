@@ -29,6 +29,9 @@ WelcomeHome
             <button type="submit">Find Item</button>
         </form>
 
+        <!-- Show All Associated Orders Button -->
+        <button id="showOrdersButton" type="button">Show all associated orders</button>
+
         {% if locations is not none %}
             <h2>Item Locations:</h2>
             {% if locations %}
@@ -156,6 +159,33 @@ WelcomeHome
             toggleButton.textContent = "Show Table";
         }
     }
+
+    document.getElementById('showOrdersButton').addEventListener('click', function () {
+        fetch('{{ url_for("auth.get_orders") }}')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.querySelector('#ordersTable tbody');
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                data.orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.orderID}</td>
+                        <td>${order.orderDate}</td>
+                        <td>${order.orderNotes}</td>
+                        <td>${order.supervisor}</td>
+                        <td>${order.client}</td>
+                        <td>${order.status}</td>
+                        <td>${order.deliveryDate}</td>
+                        <td>${order.role}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                document.getElementById('ordersTableContainer').style.display = 'block';
+            })
+            .catch(error => console.error('Error fetching orders:', error));
+    });
 
 </script>
 {% endblock %}

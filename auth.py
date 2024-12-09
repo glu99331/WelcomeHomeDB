@@ -8,6 +8,7 @@ from flask import (
     url_for,
     session,
     current_app,
+    jsonify,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -24,6 +25,7 @@ import os
 import io
 import base64
 from PIL import Image
+from pprint import pprint
 
 # Define your User class that extends UserMixin
 class User(UserMixin):
@@ -597,6 +599,182 @@ def create_auth_blueprint(login_manager: LoginManager):
             donations_per_month=donations_per_month,
             items_in_shelf=items_in_shelf,
         )
+
+    # Feature no. 6
+    @bp.route("/add_to_order", methods=["GET", "POST"])
+    @login_required
+    def add_to_order():
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+
+        categories = []
+        subcategories = []
+        items = []
+        error = None
+        selected_category = None
+        selected_subcategory = None
+
+        try:
+            # Fetch categories and subcategories for the dropdown
+            cursor.execute("SELECT DISTINCT mainCategory FROM Item")
+            categories = [row["mainCategory"] for row in cursor.fetchall()]
+            print(f"Categories: {categories}")  # Debugging
+
+            cursor.execute("SELECT DISTINCT subCategory FROM Item")
+            subcategories = [row["subCategory"] for row in cursor.fetchall()]
+            print(f"Subcategories: {subcategories}")  # Debugging
+        except Exception as e:
+            error = f"Error fetching categories or subcategories: {e}"
+            print(f"Error: {error}")  # Debugging
+
+        if request.method == "POST":
+            selected_category = request.form.get("category")
+            selected_subcategory = request.form.get("subcategory")
+            print(f"Selected Category: {selected_category}, Subcategory: {selected_subcategory}")  # Debugging
+
+            if "filter_items" in request.form:
+                # Handle filtering items
+                try:
+                    print(f"Executing query with Category: {selected_category}, Subcategory: {selected_subcategory}")
+                    cursor.execute(
+                        """
+                        SELECT i.ItemID, i.iDescription
+                        FROM Item i
+                        LEFT JOIN ItemIn ii ON i.ItemID = ii.ItemID
+                        WHERE i.mainCategory = %s AND i.subCategory = %s AND ii.ItemID IS NULL
+                        """,
+                        (selected_category, selected_subcategory)
+                    )
+                    items = cursor.fetchall()
+                    print(f"Fetched Items: {items}")  # Debugging
+                except Exception as e:
+                    error = f"Error fetching items: {e}"
+                    print(f"Error: {error}")  # Debugging
+
+            elif "add_to_order" in request.form:
+                # Handle adding selected items to a new order
+                selected_items = request.form.getlist("selected_items")
+                print(f"Selected Items: {selected_items}")  # Debugging
+                if not selected_items:
+                    flash("No items selected.", "error")
+                else:
+                    try:
+                        # Create a new order
+                        print("Creating a new order...")  # Debugging
+                        cursor.execute(
+                            "INSERT INTO Ordered (client, supervisor, orderDate) "
+                            "VALUES (%s, %s, CURDATE())",
+                            (current_user.id, "ohmpatel47")  # Replace with actual supervisor logic
+                        )
+                        db.commit()
+                        order_id = cursor.lastrowid
+                        print(f"New Order ID: {order_id}")  # Debugging
+
+                        # Add selected items to the new order
+                        for item_id in selected_items:
+                            cursor.execute(
+                                "INSERT INTO ItemIn (ItemID, orderID) VALUES (%s, %s)",
+                                (item_id, order_id)
+                            )
+                        db.commit()
+                        flash("Selected items successfully added to your new order.", "success")
+                    except Exception as e:
+                        db.rollback()
+                        error = f"Error adding items to the order: {e}"
+                        print(f"Error: {error}")  # Debugging
+
+                    # Redirect to avoid resubmission
+                    return redirect(url_for("auth.add_to_order"))
+
+        return render_template(
+            "auth/add_to_order.html",
+            categories=categories,
+            subcategories=subcategories,
+            items=items,
+            error=error,
+            selected_category=selected_category,
+            selected_subcategory=selected_subcategory
+        )
+    
+    # Q8
+    @bp.route("/get_orders", methods=["GET"])
+    @login_required
+    def get_orders():
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            """SELECT 
+            O.orderID, 
+            O.orderDate, 
+            O.orderNotes, 
+            O.supervisor, 
+            O.client, 
+            D.status, 
+            D.date AS deliveryDate,
+            'Supervisor' AS role
+        FROM 
+            Ordered O
+        LEFT JOIN 
+            Delivered D ON O.orderID = D.orderID
+        WHERE 
+            O.supervisor = ?
+        UNION
+        SELECT 
+            O.orderID, 
+            O.orderDate, 
+            O.orderNotes, 
+            O.supervisor, 
+            O.client, 
+            D.status, 
+            D.date AS deliveryDate,
+            'Client' AS role
+        FROM 
+            Ordered O
+        LEFT JOIN 
+            Delivered D ON O.orderID = D.orderID
+        WHERE 
+            O.client = ?
+        UNION
+        SELECT 
+            O.orderID, 
+            O.orderDate, 
+            O.orderNotes, 
+            O.supervisor, 
+            O.client, 
+            D.status, 
+            D.date AS deliveryDate,
+            'DeliveryPerson' AS role
+        FROM 
+            Ordered O
+        LEFT JOIN 
+            Delivered D ON O.orderID = D.orderID
+        WHERE 
+            D.userName = ?
+        ORDER BY 
+            orderDate DESC;
+    """,
+            (current_user.id, current_user.id, current_user.id),
+        )
+        orders = cursor.fetchall()
+        # Check if no orders were found
+        if not orders:
+            flash("No orders found for the current user.", "error")  # Flash the message if no orders are found
+        orders_list = [
+            {
+                "orderID": order[0],
+                "orderDate": order[1],
+                "orderNotes": order[2],
+                "supervisor": order[3],
+                "client": order[4],
+                "status": order[5],
+                "deliveryDate": order[6],
+                "role": order[7]
+            }
+            for order in orders
+        ]
+        pprint(orders_list)
+
+        return jsonify({"orders": orders_list})
 
     return bp
 
