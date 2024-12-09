@@ -496,6 +496,82 @@ def create_auth_blueprint(login_manager: LoginManager):
         pprint(orders_list)
 
         return jsonify({"orders": orders_list})
+    
+
+    @bp.route("/get_user_orders", methods=["GET"])
+    @login_required
+    def get_user_orders():
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            """SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'Supervisor' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                O.supervisor = ?
+            UNION
+            SELECT 
+                O.orderID, 
+                O.orderDate, 
+                O.orderNotes, 
+                O.supervisor, 
+                O.client, 
+                D.status, 
+                D.date AS deliveryDate,
+                'DeliveryPerson' AS role
+            FROM 
+                Ordered O
+            LEFT JOIN 
+                Delivered D ON O.orderID = D.orderID
+            WHERE 
+                D.userName = ?
+            ORDER BY 
+                orderDate DESC;
+            """,
+            (current_user.id, current_user.id),
+        )
+        orders = cursor.fetchall()
+        orders_list = [
+            {
+                "orderID": order[0],
+                "orderDate": order[1],
+                "orderNotes": order[2],
+                "supervisor": order[3],
+                "client": order[4],
+                "status": order[5],
+                "deliveryDate": order[6],
+                "role": order[7]
+            }
+            for order in orders
+        ]
+        return jsonify({"orders": orders_list})
+    
+
+    @bp.route("/update_order_status", methods=["POST"])
+    @login_required
+    def update_order_status():
+        order_id = request.form["orderID"]
+        new_status = request.form["status"]
+        db = get_db()
+        cursor = db.cursor(prepared=True)
+        cursor.execute(
+            "UPDATE Delivered SET status = ? WHERE orderID = ?",
+            (new_status, order_id)
+        )
+        db.commit()
+        return jsonify({"success": True})
+
+
 
     return bp
 
