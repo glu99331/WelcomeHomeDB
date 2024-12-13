@@ -25,7 +25,6 @@ import os
 import io
 import base64
 from PIL import Image
-from pprint import pprint
 
 # Define your User class that extends UserMixin
 class User(UserMixin):
@@ -224,7 +223,7 @@ def create_auth_blueprint(login_manager: LoginManager):
         locations = cursor.fetchall()  # Fetch all matching locations
         
         # Fetch the photo for the item
-        cursor.execute("SELECT photo FROM Item WHERE ItemID = %s", (item_id,))
+        cursor.execute("SELECT photo FROM Item WHERE ItemID = ?", (item_id,))
         photo_data = cursor.fetchone()
         if photo_data and photo_data[0]:
             # Convert BLOB to image and encode as base64
@@ -291,9 +290,9 @@ def create_auth_blueprint(login_manager: LoginManager):
             item_id = row[0]
             
             # Fetch the photo for the item
-            cursor.execute("SELECT photo FROM Item WHERE ItemID = %s", (item_id,))
+            cursor.execute("SELECT photo FROM Item WHERE ItemID = ?", (item_id,))
             photo_data = cursor.fetchone()
-            print('Photo Data',photo_data)
+            # print('Photo Data',photo_data)
             if photo_data and photo_data[0]:
                 # Convert BLOB to image and encode as base64
                 photo = photo_data[0]
@@ -662,9 +661,9 @@ def create_auth_blueprint(login_manager: LoginManager):
                         # Create a new order
                         print("Creating a new order...")  # Debugging
                         cursor.execute(
-                            "INSERT INTO Ordered (client, supervisor, orderDate) "
-                            "VALUES (?, ?, CURDATE())",
-                            (current_user.id, "ohmpatel47")  # Replace with actual supervisor logic
+                            "INSERT INTO Ordered (client, supervisor, orderDate, orderNotes) "
+                            "VALUES (?, ?, CURDATE(), ?)",
+                            (current_user.id, "tom_super", "Cutom feature 6 Delivery")  # Replace with actual supervisor logic
                         )
                         db.commit()
                         order_id = cursor.lastrowid
@@ -769,7 +768,6 @@ def create_auth_blueprint(login_manager: LoginManager):
             }
             for order in orders
         ]
-        pprint(orders_list)
 
         return jsonify({"orders": orders_list})
     

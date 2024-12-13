@@ -1,3 +1,5 @@
+DROP DATABASE IF EXISTS WelcomeHomeDB;
+
 CREATE DATABASE IF NOT EXISTS WelcomeHomeDB;
 USE WelcomeHomeDB;
 
@@ -24,7 +26,7 @@ CREATE TABLE Category (
 CREATE TABLE Item (
     ItemID INT NOT NULL AUTO_INCREMENT,
     iDescription TEXT,
-    photo BLOB, -- BLOB is better here, but for simplicity, we change it to VARCHAR; For p3 implementation, we recommend you to implement as blob
+    photo MEDIUMBLOB, -- BLOB is better here, but for simplicity, we change it to VARCHAR; For p3 implementation, we recommend you to implement as blob
     color VARCHAR(20),
     isNew BOOLEAN DEFAULT TRUE,
     hasPieces BOOLEAN,
