@@ -4,7 +4,7 @@
 - [Project Overview](#project-overview)
 - [Features](#features)
 - [Getting Started](#getting-started)
-- [Assumptions] (#assumptions)
+- [Assumptions](#assumptions)
 
 ---
 
