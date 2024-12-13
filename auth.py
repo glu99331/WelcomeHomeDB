@@ -413,7 +413,8 @@ def create_auth_blueprint(login_manager: LoginManager):
                                 "height": height,
                                 "roomNum": room_num,
                                 "shelfNum": shelf_num,
-                                "pNotes": pNotes
+                                "pNotes": pNotes,
+                                "pieceNum": piece_num
                             })
                             piece_num += 1
 
@@ -458,6 +459,7 @@ def create_auth_blueprint(login_manager: LoginManager):
                                     room_num = piece['roomNum']
                                     shelf_num = piece['shelfNum']
                                     p_notes = piece['pNotes']
+                                    piece_num = piece['pieceNum']
 
                                     cursor.execute(
                                         """
