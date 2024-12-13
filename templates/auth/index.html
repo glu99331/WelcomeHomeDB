@@ -138,7 +138,7 @@ WelcomeHome
                         <h3>Item ID: {{ item.itemID }}</h3>
                         <!-- Display the photo if it exists -->
                         {% if item_image %}
-                            <img src="data:image/png;base64,{{ item_image }}" alt="Item Photo" style="max-width: 300px; max-height: 300px;">
+                            <img src="data:image/png;base64,{{ item_image[item.itemID] }}" alt="Item Photo" style="max-width: 300px; max-height: 300px;">
                         {% else %}
                             <p>No photo available for this item.</p>
                         {% endif %}

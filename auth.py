@@ -286,6 +286,7 @@ def create_auth_blueprint(login_manager: LoginManager):
 
         # Organize results by ItemID and fetch the image (if available)
         order_items = {}
+        item_image = {}
         for row in results:
             item_id = row[0]
             
@@ -311,6 +312,8 @@ def create_auth_blueprint(login_manager: LoginManager):
                     "photo": img_base64,  # Add photo data to the item
                     "pieces": []
                 }
+            
+            item_image[item_id] = img_base64  # Store the image data for the item
 
             order_items[item_id]["pieces"].append(
                 {
@@ -334,7 +337,7 @@ def create_auth_blueprint(login_manager: LoginManager):
             roles=roles,
             current_role=current_role,  # Pass current_role to the template
             can_toggle_role=can_toggle_role,  # Pass boolean for enabling view toggle
-            item_image=img_base64
+            item_image=item_image
         )
     
     # Q4
